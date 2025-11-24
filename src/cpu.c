@@ -1,5 +1,6 @@
 // Forth16 CPU
 
+#include <string.h>
 #include "vm.h"
 
 u8 vmem[65536]; // 64K Forth memory
@@ -16,20 +17,29 @@ u8 vmem[65536]; // 64K Forth memory
 #define BRANCH      P += OFFSET
 #define NOBRANCH    P += 1
 
+// test programs
+u8 bye[] = {7,0,0, 7,0,0, 8, 255}; // 0 # 0 # SWI
+u8 hello[] = { 7,11,0,  7,3,0,  7,1,0,  8,  255,  'h','i','\n'};
+
+#define sample hello
+
 void cpu_run(void) {
-    i16  T=0;
-    i16 *S=0;
-    u16 *R=0;
-    u8  *P=0;
-    u16 *I=0;
-    u16 *W=0;
+    i16  T = 0;
+    i16 *S = ptr(0);
+    u16 *R = ptr(0);
+    u8  *P = ptr(0);
+    u16 *I = ptr(0);
+    u16 *W = ptr(0);
 
     i16 t;
+
+#ifdef sample
+    memcpy(vmem, sample, sizeof sample);
+#endif
 
     while (1) {
         switch (*P++) {
             case 0x00:  NEXT
-
             case 0x01:  P = ptr(*R++); break; // RET
             case 0x02:  *--R = va(P+2); // CALL...
             case 0x03:  P = ptr(P[0] | (P[1] << 8)); break; // JMP
@@ -37,6 +47,15 @@ void cpu_run(void) {
             case 0x05:  BRANCH; break; // BRANCH
             case 0x06:  push *I++; break; // LIT
             case 0x07:  push P[0] | (P[1] << 8), P+=2; break; // #
+
+            case 0x08:  T = swi(T, S); break;
+            case 0x09:
+            case 0x0A:
+            case 0x0B:
+            case 0x0C:
+            case 0x0D:
+            case 0x0E:
+            case 0x0F:  break;
 
             // Load T from register or immed.
             case 0x10:  T = *P++;  break; // LDI8
@@ -145,7 +164,8 @@ void cpu_run(void) {
                 break;
             }
             // : 
-
+            default:
+                return; // invalid opcode
 
 }
 

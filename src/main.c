@@ -17,6 +17,7 @@ int main() {
         fprintf(stderr, "Cannot read boot block from %s\n", blockfile);
         return 2;
     }
-//    cpu_reset();
+    cpu_run();
+    fprintf(stderr, "Forth16 VM exit\n");
     return 0;
 }
