@@ -7,7 +7,7 @@
 
 #include "vm.h"
 
-static int block_fd;
+static int block_fd = -1;
 
 static int ioerr(ssize_t size) {
     if (size < 0) return errno;
@@ -15,21 +15,18 @@ static int ioerr(ssize_t size) {
     return 0;
 }
 
-int disk_init(const char* blockfile, int len) {
-    char *cstr = malloc_cstr(blockfile, len);
-    block_fd = open(cstr, O_RDWR);
-    free(cstr);
+int disk_init(const char* blockfile) {
+    block_fd = open(blockfile, O_RDWR);
     return block_fd < 0 ? errno : 0;
 }
 
 int disk_read(int blk, void *buffer) {
-    lseek(block_fd, blk * BLOCK_SIZE, SEEK_SET);
+    if (lseek(block_fd, blk * BLOCK_SIZE, SEEK_SET) < 0) return errno;
     return ioerr(read(block_fd, buffer, BLOCK_SIZE));
-
 }
 
 int disk_write(int blk, void *buffer) {
-    lseek(block_fd, blk * BLOCK_SIZE, SEEK_SET);
+    if (lseek(block_fd, blk * BLOCK_SIZE, SEEK_SET) < 0) return errno;
     return ioerr(write(block_fd, buffer, BLOCK_SIZE));
 }
 

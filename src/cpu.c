@@ -1,5 +1,6 @@
 // Forth16 CPU
 
+#include <stdio.h>
 #include <string.h>
 #include "vm.h"
 
@@ -21,7 +22,7 @@ u8 vmem[65536]; // 64K Forth memory
 u8 bye[] = {7,0,0, 7,0,0, 8, 255}; // 0 # 0 # SWI
 u8 hello[] = { 7,11,0,  7,3,0,  7,1,0,  8,  255,  'h','i','\n'};
 
-#define sample hello
+// #define sample hello
 
 void cpu_run(void) {
     i16  T = 0;
@@ -36,17 +37,22 @@ void cpu_run(void) {
 #ifdef sample
     memcpy(vmem, sample, sizeof sample);
 #endif
+#if 0
+    for (int i = 0; i < 100; i++) {
+        printf("%02X ", vmem[i]);
+    }   putchar('\n');
+#endif
 
     while (1) {
         switch (*P++) {
             case 0x00:  NEXT
-            case 0x01:  P = ptr(*R++); break; // RET
-            case 0x02:  *--R = va(P+2); // CALL...
-            case 0x03:  P = ptr(P[0] | (P[1] << 8)); break; // JMP
-            case 0x04:  break;
-            case 0x05:  BRANCH; break; // BRANCH
-            case 0x06:  push *I++; break; // LIT
-            case 0x07:  push P[0] | (P[1] << 8), P+=2; break; // #
+            case 0x01:  P = ptr(*R++); break;                   // RET
+            case 0x02:  *--R = va(P+2);                         // CALL...
+            case 0x03:  P = ptr(P[0] | (P[1] << 8)); break;     // JMP
+            case 0x04:  BRANCH; break;                          // BRANCH
+            case 0x05:  break;
+            case 0x06:  push *I++; break;                       // LIT
+            case 0x07:  push P[0] | (P[1] << 8), P+=2; break;   // #
 
             case 0x08:  T = swi(T, S); break;
             case 0x09:

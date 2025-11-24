@@ -31,7 +31,7 @@ int accept(void *buf, int size);
 
 // disk i/o, functions return 0 if ok else errno
 #define BLOCK_SIZE 1024
-int disk_init(const char* blockfile, int len);
+int disk_init(const char* blockfile);
 int disk_read(int blk, void *addr);
 int disk_write(int blk, void *addr);
 int disk_flush(void);

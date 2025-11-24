@@ -1,4 +1,4 @@
-// Console
+// Console I/O
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -25,5 +25,5 @@ int accept(void *buf, int size) {
 
 int type(void *buf, int len) {
     int written = fwrite(buf, len, 1, stdout);
-    return written == len ? 0 : 1;
+    return written == len ? 0 : -1;
 }
