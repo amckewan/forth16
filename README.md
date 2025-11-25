@@ -40,3 +40,8 @@ and are not accessable from other functions.
 3 | P | Program counter
 4 | I | Forth interpreter pointer
 5 | W | Word pointer for ITC
+
+# Credits
+https://base64.sourceforge.net/b64.c
+
+Copyright (c) 2001 Bob Trower, Trantor Standard Systems Inc.

@@ -1,0 +1,512 @@
+BwsABwMABwEACP9oaQoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+( This screen has stuff )
+a new line
+
+THREE
+
+
+: HI 9 LOAD 10 LOAD ; ( electives )
+
+
+line 8
+line 9
+line 10
+FOO
+
+
+
+123456ABC03456abc0456789012345678901234567890123419NOV25AM
+
+this is the NEW! line two!
+Threeeee!
+three
+
+: HI 9 LOAD ; ( electives )
+
+
+
+
+line 8
+line 9
+line 10
+
+
+( Screen 3 is right here )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+( Assembler)
+1 CONSTANT S   2 CONSTANT R
+: OP, ( n op -)   OR C, ;
+: LDR ( reg -)   10 OP, ;   : STR ( reg -)   18 OP, ;
+: LDI ( n -)   10 C, , ;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+( Extensions)
+INCLUDE ../pfft/ed.fs
+\ [DEFINED] EMPTY [IF] EMPTY [THEN] MARKER EMPTY
+ONLY FORTH ALSO DEFINITIONS DECIMAL
+
+10 LOAD  11 LOAD
+
+
+
+
+
+
+
+
+
+
+( Screen index )
+: L   SCR @ LIST ;
+: N    1 SCR +! ;
+: B   -1 SCR +! ;
+
+: USED? ( scr -)   0 SWAP BLOCK C/L BOUNDS DO
+   I C@ BL < IF DROP 0 LEAVE THEN  I C@ BL > +  LOOP ;
+: INDEX ( start end -)  1+ SWAP DO
+   CR I 4 .R SPACE  I USED? IF I BLOCK C/L TYPE THEN  LOOP ;
+: QX ( n)   60 / 60 * DUP 60 + SWAP DO
+   I 3 MOD 0= IF CR THEN  I 4 .R SPACE
+   I USED? IF I BLOCK 19 TYPE ELSE 19 SPACES THEN  SPACE LOOP ;
+
+1024 CONSTANT B/BUF
+: COPY ( from to -)   SWAP BLOCK SWAP BUFFER B/BUF MOVE UPDATE ;
+
+\ String operators                                    04Apr84map
+\ Delete count chars at the start of the buffer, blank to end
+: DELETE   ( buffer size count -- )
+   OVER MIN >R  R@ - ( left over )  DUP 0>
+   IF  2DUP SWAP DUP R@ + -ROT SWAP CMOVE  THEN  + R> BLANK ;
+
+\ Insert a string into the start of the buffer, end chars lost
+: INSERT   ( string length buffer size -- )
+   ROT OVER MIN >R  R@ - ( left over )
+   OVER DUP R@ +  ROT CMOVE>   R> CMOVE  ;
+
+\ Overwrite string at the start of buffer
+: REPLACE   ( string length buffer size -- )  ROT MIN CMOVE ;
+
+
+
+\ Move the Editor's cursor around                     16Oct83map
+VARIABLE R# ( cursor, 0-1023)
+: TOP          ( -- )      0 R# ! ;
+: C            ( n -- )    R# @ + B/BUF MOD R# ! ;
+: T            ( n -- )    TOP  C/L *  C ;
+: CURSOR       ( -- n )    R# @ ;
+: LINE#        ( -- n )    CURSOR  C/L  /  ;
+: COL#         ( -- n )    CURSOR  C/L  MOD  ;
+: 'START       ( -- adr )  SCR @ BLOCK ;
+: 'CURSOR      ( -- adr )  'START  CURSOR  + ;
+: 'LINE        ( -- adr )  'CURSOR  COL# -  ;
+: #AFTER       ( -- n )    C/L COL# -  ;
+: #REMAINING   ( -- n )    B/BUF CURSOR - ;
+: #END         ( -- n )    #REMAINING COL# +  ;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+( Editor - load screen for gforth )
+[DEFINED] EMPTY [IF] EMPTY [THEN] MARKER EMPTY
+ONLY FORTH ALSO DEFINITIONS
+VOCABULARY EDITOR
+
+: L   SCR @ LIST ;
+: N    1 SCR +! ;
+: B   -1 SCR +! ;
+
+
+: F83-SEARCH   ( sadr slen badr blen -- n f )
+   DUP >R  2SWAP SEARCH DUP IF  R@ ROT - SWAP  THEN
+   ROT R> 2DROP ;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+( Editor - load screen for gforth )
+[DEFINED] EMPTY [IF] EMPTY [THEN] MARKER EMPTY
+ONLY FORTH ALSO DEFINITIONS
+VOCABULARY EDITOR
+
+: L   SCR @ LIST ;
+: N    1 SCR +! ;
+: B   -1 SCR +! ;
+
+
+: F83-SEARCH   ( sadr slen badr blen -- n f )
+   DUP >R  2SWAP SEARCH DUP IF  R@ ROT - SWAP  THEN
+   ROT R> 2DROP ;
+
+
+
+\ Move the Editor's cursor around                     16Oct83map
+VARIABLE R# ( cursor, 0-1023)
+: TOP          ( -- )      0 R# ! ;
+: C            ( n -- )    R# @ + B/BUF MOD R# ! ;
+: T            ( n -- )    TOP  C/L *  C ;
+: CURSOR       ( -- n )    R# @ ;
+: LINE#        ( -- n )    CURSOR  C/L  /  ;
+: COL#         ( -- n )    CURSOR  C/L  MOD  ;
+: 'START       ( -- adr )  SCR @ BLOCK ;
+: 'CURSOR      ( -- adr )  'START  CURSOR  + ;
+: 'LINE        ( -- adr )  'CURSOR  COL# -  ;
+: #AFTER       ( -- n )    C/L COL# -  ;
+: #REMAINING   ( -- n )    B/BUF CURSOR - ;
+: #END         ( -- n )    #REMAINING COL# +  ;
+
+

@@ -16,5 +16,16 @@ LIBS = -ledit -ldl
 vm: $(SOURCES) $(HEADERS)
 	$(CC) $(CFLAGS) $(SOURCES) $(LIBS) -o $@
 
+blk2txt: tools/blk2txt.c
+	$(CC) $(CFLAGS) tools/blk2txt.c -o $@
+
+blocks.fb: blk2txt blocks.fb.fs
+	./blk2txt d  < blocks.fb.fs  > blocks.fb
+	rm blocks.fb.fs
+
+encode: blk2txt
+	./blk2txt e  < blocks.fb  > blocks.fb.fs
+	rm blocks.fb
+
 clean:
 	@rm -f vm
