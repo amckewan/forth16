@@ -143,8 +143,8 @@ line 10
 
 
 ( Extensions)
-INCLUDE ../pfft/ed.fs
-\ [DEFINED] EMPTY [IF] EMPTY [THEN] MARKER EMPTY
+12 LOAD ( gforth )
+[DEFINED] EMPTY [IF] EMPTY [THEN] MARKER EMPTY
 ONLY FORTH ALSO DEFINITIONS DECIMAL
 
 10 LOAD  11 LOAD
@@ -158,21 +158,21 @@ ONLY FORTH ALSO DEFINITIONS DECIMAL
 
 
 
-( Screen index )
-: L   SCR @ LIST ;
-: N    1 SCR +! ;
-: B   -1 SCR +! ;
-
-: USED? ( scr -)   0 SWAP BLOCK C/L BOUNDS DO
+( Screen index )  FORTH DEFINITIONS
+: USED? ( scr -- f )   0 SWAP BLOCK C/L BOUNDS DO
    I C@ BL < IF DROP 0 LEAVE THEN  I C@ BL > +  LOOP ;
-: INDEX ( start end -)  1+ SWAP DO
+: INDEX ( start end -- )  1+ SWAP DO
    CR I 4 .R SPACE  I USED? IF I BLOCK C/L TYPE THEN  LOOP ;
 : QX ( n)   60 / 60 * DUP 60 + SWAP DO
    I 3 MOD 0= IF CR THEN  I 4 .R SPACE
    I USED? IF I BLOCK 19 TYPE ELSE 19 SPACES THEN  SPACE LOOP ;
 
-1024 CONSTANT B/BUF
 : COPY ( from to -)   SWAP BLOCK SWAP BUFFER B/BUF MOVE UPDATE ;
+
+
+
+
+
 
 \ String operators                                    04Apr84map
 \ Delete count chars at the start of the buffer, blank to end
@@ -190,67 +190,67 @@ ONLY FORTH ALSO DEFINITIONS DECIMAL
 
 
 
-\ Move the Editor's cursor around                     16Oct83map
-VARIABLE R# ( cursor, 0-1023)
-: TOP          ( -- )      0 R# ! ;
-: C            ( n -- )    R# @ + B/BUF MOD R# ! ;
-: T            ( n -- )    TOP  C/L *  C ;
-: CURSOR       ( -- n )    R# @ ;
-: LINE#        ( -- n )    CURSOR  C/L  /  ;
-: COL#         ( -- n )    CURSOR  C/L  MOD  ;
-: 'START       ( -- adr )  SCR @ BLOCK ;
-: 'CURSOR      ( -- adr )  'START  CURSOR  + ;
-: 'LINE        ( -- adr )  'CURSOR  COL# -  ;
-: #AFTER       ( -- n )    C/L COL# -  ;
-: #REMAINING   ( -- n )    B/BUF CURSOR - ;
-: #END         ( -- n )    #REMAINING COL# +  ;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-( Editor - load screen for gforth )
-[DEFINED] EMPTY [IF] EMPTY [THEN] MARKER EMPTY
-ONLY FORTH ALSO DEFINITIONS
-VOCABULARY EDITOR
-
+( gforth )   ONLY FORTH ALSO DEFINITIONS DECIMAL
+1024 CONSTANT B/BUF
 : L   SCR @ LIST ;
 : N    1 SCR +! ;
 : B   -1 SCR +! ;
 
 
-: F83-SEARCH   ( sadr slen badr blen -- n f )
-   DUP >R  2SWAP SEARCH DUP IF  R@ ROT - SWAP  THEN
-   ROT R> 2DROP ;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -21,11 +21,9 @@ blk2txt: tools/blk2txt.c
 
 blocks.fb: blk2txt blocks.fb.fs
 	./blk2txt d  < blocks.fb.fs  > blocks.fb
-	rm blocks.fb.fs
 
 encode: blk2txt
 	./blk2txt e  < blocks.fb  > blocks.fb.fs
-	rm blocks.fb
 
 clean:
 	@rm -f vm
