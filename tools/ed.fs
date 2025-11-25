@@ -129,14 +129,16 @@ VARIABLE CHANGED
 : D   ( -- )   F E ;
 : R   ( -- )   E I ;
 : TILL    ( -- )   'C#A (TILL)  'F+  DELETE ;
-\ deletes up to, but not including, <text>. 'Justify'
 : J       ( -- )   'C#A (TILL)  DELETE ;
-\ KT puts all text between the cursor and <text> inclusive
-\ into the insert buffer. 'Keep-Till'
 : KT      ( -- )   'CURSOR (TILL)  'F+  'INSERT PLACE  ;
 
+: NEW ( n)   L/SCR SWAP
+   DO [ FORTH ] I [ EDITOR ] DUP T  CR 2 .R SPACE  QUERY
+      #TIB @ IF  P  ELSE  LEAVE  THEN
+   LOOP ;
+
 ( Line display)
-: .LINE   'LINE COL# TYPE  [CHAR] ^ EMIT  'CURSOR #AFTER TYPE
+: .LINE   'LINE COL# TYPE  94 EMIT  'CURSOR #AFTER TYPE
    LINE# 3 .R SPACE ;
 : ?LINE   >IN @ #TIB @ = IF  CR .LINE  THEN ;
 

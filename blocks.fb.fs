@@ -148,7 +148,7 @@ line 10
 ONLY FORTH ALSO DEFINITIONS DECIMAL
 
 10 LOAD  11 LOAD
-
+30 LOAD ( editor )
 
 
 
@@ -195,6 +195,7 @@ ONLY FORTH ALSO DEFINITIONS DECIMAL
 : L   SCR @ LIST ;
 : N    1 SCR +! ;
 : B   -1 SCR +! ;
+: VOCABULARY ( n)   DROP VOCABULARY ;
 
 
 
@@ -477,11 +478,9 @@ ONLY FORTH ALSO DEFINITIONS DECIMAL
 
 
 
-
-( Editor - load screen for gforth )
-[DEFINED] EMPTY [IF] EMPTY [THEN] MARKER EMPTY
-ONLY FORTH ALSO DEFINITIONS
-VOCABULARY EDITOR
+( Editor )
+FORTH DEFINITIONS DECIMAL
+HEX 0031 VOCABULARY EDITOR DECIMAL
 
 : L   SCR @ LIST ;
 : N    1 SCR +! ;
@@ -492,6 +491,7 @@ VOCABULARY EDITOR
    DUP >R  2SWAP SEARCH DUP IF  R@ ROT - SWAP  THEN
    ROT R> 2DROP ;
 
+31 37 THRU
 
 
 \ Move the Editor's cursor around                     16Oct83map
@@ -508,5 +508,101 @@ VARIABLE R# ( cursor, 0-1023)
 : #AFTER       ( -- n )    C/L COL# -  ;
 : #REMAINING   ( -- n )    B/BUF CURSOR - ;
 : #END         ( -- n )    #REMAINING COL# +  ;
+
+
+\ buffers                                             11Mar84map
+VARIABLE CHANGED
+: MODIFIED   ( -- )   CHANGED ON  UPDATE ;
+: ?TEXT   ( adr -- adr+1 n )   >R  94 PARSE DUP
+   IF  R@ C/L 1+ BLANK  R@ PLACE  ELSE  2DROP  THEN  R> COUNT ;
+84 CONSTANT C/PAD
+: 'INSERT   ( -- insert-buffer )   PAD     C/PAD + ;
+: 'FIND     ( -- find-buffer )     'INSERT C/PAD + ;
+: .FRAMED   ( adr -- )   ." '" COUNT TYPE ." '" ;
+: .BUFS     ( -- )
+   CR ." I " 'INSERT .FRAMED   CR ." F " 'FIND .FRAMED ;
+: ?MISSING   ( n f -- n | )
+   0= IF  DROP 'FIND .FRAMED ."  not found " QUIT THEN ;
+: KEEP   ( -- )   'LINE C/L 'INSERT  PLACE  ;
+
+
+\ buffers                                             11Mar84map
+: K   ( -- )   'FIND PAD  C/PAD CMOVE
+   'INSERT 'FIND  C/PAD CMOVE   PAD 'INSERT  C/PAD CMOVE  ;
+: W   ( -- )   SAVE-BUFFERS  ;
+: 'C#A   ( -- 'cursor #after )   'CURSOR #AFTER  MODIFIED  ;
+: (I)  ( -- len 'insert len 'cursor #after )
+   'INSERT ?TEXT  TUCK 'C#A  ;
+: (TILL)  ( -- n )   'FIND ?TEXT 'C#A F83-SEARCH ?MISSING ;
+: 'F+   ( n1 -- n2 )  'FIND C@ +  ;
+
+
+
+
+
+
+
+\ line editing                                        01Apr84map
+: I   ( -- )   (I)  INSERT  C ;
+: O   ( -- )   (I)  REPLACE C ;
+: P   ( -- )   'INSERT ?TEXT DROP 'LINE C/L CMOVE MODIFIED ;
+: U   ( -- )   C/L C 'LINE C/L OVER #END INSERT  P ;
+: X   ( -- )   KEEP  'LINE #END C/L  DELETE MODIFIED ;
+: SPLIT  ( -- ) \ breaks the current line in two at the cursor
+   PAD C/L 2DUP BLANK 'CURSOR #REMAINING INSERT MODIFIED ;
+: JOIN   ( -- )   'LINE C/L + C/L  'C#A  INSERT ;
+: WIPE   ( -- )   'START B/BUF BLANK  MODIFIED ;
+: G   (  screen line -- )  ( not M? )
+   C/L * SWAP BLOCK +  C/L 'INSERT PLACE
+   C/L NEGATE C  U  C/L C ;
+: BRING   ( screen first last -- )
+   1+ SWAP DO  DUP [ FORTH ] I [ EDITOR ] G  LOOP  DROP ;
+
+\ find and replace                                    10Mar84map
+: FIND? ( - n f ) 'FIND ?TEXT  'CURSOR #REMAINING  F83-SEARCH ;
+: F   ( -- )   FIND? ?MISSING   'F+ C ;
+: ?ENOUGH ( n)   1+ DEPTH > ABORT" arg?" ;
+: S   ( n - )   1 ?ENOUGH   FIND?
+   IF  'F+ C  EXIT  THEN  DROP  FALSE OVER SCR @
+   DO   N TOP  'FIND COUNT 'CURSOR #REMAINING F83-SEARCH
+     IF  'F+ C DROP TRUE LEAVE  ELSE  DROP  THEN
+     KEY? ABORT" Break!"
+   LOOP  ?MISSING ;
+: E   ( -- )   'FIND C@  DUP NEGATE C  'C#A ROT DELETE ;
+: D   ( -- )   F E ;
+: R   ( -- )   E I ;
+: TILL    ( -- )   'C#A (TILL)  'F+  DELETE ;
+: J       ( -- )   'C#A (TILL)  DELETE ;
+: KT      ( -- )   'CURSOR (TILL)  'F+  'INSERT PLACE  ;
+( Enter new lines)
+: NEW ( n)   16 SWAP
+   DO [ FORTH ] I [ EDITOR ] DUP T  CR 2 .R SPACE  QUERY
+      #TIB @ IF  P  ELSE  LEAVE  THEN
+   LOOP ;
+
+
+
+
+
+
+
+
+
+
+
+( Line display)
+: .LINE   'LINE COL# TYPE  94 EMIT  'CURSOR #AFTER TYPE
+   LINE# 3 .R SPACE ;
+: ?LINE   >IN @ #TIB @ = IF  CR .LINE  THEN ;
+
+: T DEPTH IF T THEN ?LINE ;
+: F F ?LINE ;   : S S ?LINE ;   : E E ?LINE ;   : D D ?LINE ;
+: R R ?LINE ;   : J J ?LINE ;   : TILL TILL ?LINE ;
+
+: N N L ;   : B B L ;
+
+FORTH DEFINITIONS
+: LIST   EDITOR LIST ;
+
 
 
