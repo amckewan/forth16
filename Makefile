@@ -19,11 +19,11 @@ vm: $(SOURCES) $(HEADERS)
 blk2txt: tools/blk2txt.c
 	$(CC) $(CFLAGS) tools/blk2txt.c -o $@
 
-blocks.fb: blk2txt blocks.fb.fs
-	./blk2txt d  < blocks.fb.fs  > blocks.fb
+blocks.fb: blk2txt blocks.fb.fx
+	./blk2txt d < blocks.fb.fx > blocks.fb
 
 encode: blk2txt
-	./blk2txt e  < blocks.fb  > blocks.fb.fs
+	./blk2txt e < blocks.fb > blocks.fb.fx
 
 clean:
 	@rm -f vm blk2txt a.out

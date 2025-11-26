@@ -1,0 +1,300 @@
+S 0
+BwsABwMABwEACP9oaQoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAF==
+B 1
+B 2
+B 3
+B 4
+B 5
+B 6
+B 7
+B 8
+S 9
+( Electives)   FORTH DEFINITIONS DECIMAL
+( Utils)  10 LOAD  11 LOAD
+( Editor)  30 LOAD
+
+: HI ." ready" ;
+GILD
+
+
+
+
+
+
+
+
+
+
+S 10
+( Screen index )
+: USED? ( scr -- f )   0 SWAP BLOCK C/L BOUNDS DO
+   I C@ BL < IF DROP 0 LEAVE THEN  I C@ BL > +  LOOP ;
+: INDEX ( start end -- )  1+ SWAP DO
+   CR I 4 .R SPACE  I USED? IF I BLOCK C/L TYPE THEN  LOOP ;
+: QX ( n)   60 / 60 * DUP 60 + SWAP DO
+   I 3 MOD 0= IF CR THEN  I 4 .R SPACE
+   I USED? IF I BLOCK 19 TYPE ELSE 19 SPACES THEN  SPACE LOOP ;
+
+1024 CONSTANT B/BUF
+: COPY ( from to -)   SWAP BLOCK SWAP BUFFER B/BUF MOVE UPDATE ;
+
+
+
+
+
+S 11
+( String operators from F83)
+\ Delete count chars at the start of the buffer, blank to end
+: DELETE   ( buffer size count -- )
+   OVER MIN >R  R@ - ( left over )  DUP 0>
+   IF  2DUP SWAP DUP R@ + -ROT SWAP CMOVE  THEN  + R> BLANK ;
+
+\ Insert a string into the start of the buffer, end chars lost
+: INSERT   ( string length buffer size -- )
+   ROT OVER MIN >R  R@ - ( left over )
+   OVER DUP R@ +  ROT CMOVE>   R> CMOVE  ;
+
+\ Overwrite string at the start of buffer
+: REPLACE   ( string length buffer size -- )  ROT MIN CMOVE ;
+
+
+
+B 12
+B 13
+B 14
+B 15
+B 16
+B 17
+B 18
+B 19
+B 20
+B 21
+B 22
+B 23
+B 24
+B 25
+B 26
+B 27
+B 28
+B 29
+S 30
+( Editor )   DECIMAL
+
+: F83-SEARCH   ( sadr slen badr blen -- n f )
+   DUP >R  2SWAP SEARCH DUP IF  R@ ROT - SWAP  THEN
+   ROT R> 2DROP ;
+
+EDITOR DEFINITIONS   31 38 THRU   FORTH DEFINITIONS
+
+: LIST   EDITOR [ EDITOR ] LIST ; FORTH
+: L   SCR @ LIST ;
+: N    1 SCR +!  L ;
+: B   -1 SCR +!  L ;
+
+
+
+
+S 31
+( Move the Editor's cursor around)
+VARIABLE R# ( cursor, 0-1023)
+: TOP          ( -- )      0 R# ! ;
+: C            ( n -- )    R# @ + B/BUF MOD R# ! ;
+: T            ( n -- )    TOP  C/L *  C ;
+: CURSOR       ( -- n )    R# @ ;
+: LINE#        ( -- n )    CURSOR  C/L  /  ;
+: COL#         ( -- n )    CURSOR  C/L  MOD  ;
+: 'START       ( -- adr )  SCR @ BLOCK ;
+: 'CURSOR      ( -- adr )  'START  CURSOR  + ;
+: 'LINE        ( -- adr )  'CURSOR  COL# -  ;
+: #AFTER       ( -- n )    C/L COL# -  ;
+: #REMAINING   ( -- n )    B/BUF CURSOR - ;
+: #END         ( -- n )    #REMAINING COL# +  ;
+
+
+S 32
+( Editor buffers)
+VARIABLE CHANGED
+: MODIFIED   ( -- )   CHANGED ON  UPDATE ;
+: ?TEXT   ( adr -- adr+1 n )   >R  94 PARSE DUP
+   IF  R@ C/L 1+ BLANK  R@ PLACE  ELSE  2DROP  THEN  R> COUNT ;
+84 CONSTANT C/PAD
+: 'INSERT   ( -- insert-buffer )   PAD     C/PAD + ;
+: 'FIND     ( -- find-buffer )     'INSERT C/PAD + ;
+: .FRAMED   ( adr -- )   ." '" COUNT TYPE ." '" ;
+: .BUFS     ( -- )
+   CR ." I " 'INSERT .FRAMED   CR ." F " 'FIND .FRAMED ;
+: ?MISSING   ( n f -- n | )
+   0= IF  DROP 'FIND .FRAMED ."  not found " QUIT THEN ;
+: KEEP   ( -- )   'LINE C/L 'INSERT  PLACE  ;
+
+
+S 33
+( Editor buffers)
+: K   ( -- )   'FIND PAD  C/PAD CMOVE
+   'INSERT 'FIND  C/PAD CMOVE   PAD 'INSERT  C/PAD CMOVE  ;
+: W   ( -- )   SAVE-BUFFERS  ;
+: 'C#A   ( -- 'cursor #after )   'CURSOR #AFTER  MODIFIED  ;
+: (I)  ( -- len 'insert len 'cursor #after )
+   'INSERT ?TEXT  TUCK 'C#A  ;
+: (TILL)  ( -- n )   'FIND ?TEXT 'C#A F83-SEARCH ?MISSING ;
+: 'F+   ( n1 -- n2 )  'FIND C@ +  ;
+
+
+
+
+
+
+
+S 34
+( Line editing)
+: I   ( -- )   (I)  INSERT  C ;
+: O   ( -- )   (I)  REPLACE C ;
+: P   ( -- )   'INSERT ?TEXT DROP 'LINE C/L CMOVE MODIFIED ;
+: U   ( -- )   C/L C 'LINE C/L OVER #END INSERT  P ;
+: X   ( -- )   KEEP  'LINE #END C/L  DELETE MODIFIED ;
+: SPLIT  ( -- ) \ breaks the current line in two at the cursor
+   PAD C/L 2DUP BLANK 'CURSOR #REMAINING INSERT MODIFIED ;
+: JOIN   ( -- )   'LINE C/L + C/L  'C#A  INSERT ;
+: WIPE   ( -- )   'START B/BUF BLANK  MODIFIED ;
+: G   (  screen line -- )  ( not M? )
+   C/L * SWAP BLOCK +  C/L 'INSERT PLACE
+   C/L NEGATE C  U  C/L C ;
+: BRING   ( screen first last -- )
+   1+ SWAP DO  DUP [ FORTH ] I [ EDITOR ] G  LOOP  DROP ;
+
+S 35
+( Find and replace)
+: FIND? ( - n f ) 'FIND ?TEXT  'CURSOR #REMAINING  F83-SEARCH ;
+: F   ( -- )   FIND? ?MISSING   'F+ C ;
+: ?ENOUGH ( n)   1+ DEPTH > ABORT" arg?" ;
+: S   ( n - )   1 ?ENOUGH   FIND?
+   IF  'F+ C  EXIT  THEN  DROP  FALSE OVER SCR @
+   DO   1 SCR +! TOP  'FIND COUNT 'CURSOR #REMAINING F83-SEARCH
+     IF  'F+ C DROP TRUE LEAVE  ELSE  DROP  THEN
+     KEY? ABORT" Break!"
+   LOOP  ?MISSING ;
+: E   ( -- )   'FIND C@  DUP NEGATE C  'C#A ROT DELETE ;
+: D   ( -- )   F E ;
+: R   ( -- )   E I ;
+: TILL    ( -- )   'C#A (TILL)  'F+  DELETE ;
+: J       ( -- )   'C#A (TILL)  DELETE ;
+: KT      ( -- )   'CURSOR (TILL)  'F+  'INSERT PLACE  ;
+S 36
+( Editor new lines )
+: NEW ( n)   16 SWAP
+   DO [ FORTH ] I [ EDITOR ] DUP T  CR 2 .R SPACE  QUERY
+      #TIB @ IF  P  ELSE  LEAVE  THEN
+   LOOP ;
+
+
+
+
+
+
+
+
+
+
+
+S 37
+( Editor display)
+: .ROW ( row)  DUP 2 .R SPACE  C/L * 'START +  C/L TYPE ;
+: .LINE   LINE# 2 .R SPACE
+   'LINE COL# TYPE  94 EMIT  'CURSOR #AFTER TYPE ;
+
+: LIST ( n)   DUP SCR !  ." Scr " .
+   16 0 DO  [ FORTH ] I [ EDITOR ]  CR
+      DUP LINE# = IF DROP .LINE ELSE .ROW THEN ." |"
+   LOOP ;
+
+
+
+
+
+
+
+S 38
+( Line display)
+( Display current line if there are no more commands)
+: ?L   >IN @ #TIB @ = IF  CR .LINE  THEN ;
+
+: T DEPTH IF T THEN ?L ;
+: F F ?L ;   : S S ?L ;   : E E ?L ;   : D D ?L ;
+: O O ?L ;   : R R ?L ;   : I I ?L ;   : J J ?L ;
+: TILL TILL ?L ;
+
+
+
+
+
+
+
+
+B 39
+B 40
+B 41
+B 42
+B 43
+B 44
+S 45
+( Assembler )
+FORTH DEFINITIONS
+
+( mem access, define as needed)
+: AHERE HERE ;
+: AC@ C@ ;   : AC! C! ;
+: A@ @ ;     : A! ! ;
+
+
+
+
+
+
+
+
+
+S 46
+( Assembler)
+ASSEMBLER DEFINITIONS HEX
+0 CONSTANT T   1 CONSTANT S   2 CONSTANT R   3 CONSTANT P
+4 CONSTANT I   5 CONSTANT W
+: OP, ( n op -)   OR TC, ;
+: LD ( r)   ?DUP IF  10 OP,  ELSE  10 TC, T,  THEN ;
+: ST ( r)   DUP 0= ABORT" T?"  18 OP, ;
+
+
+
+
+
+
+
+
+
+B 47
+B 48
+B 49
+B 50
+Z 51
+Z 52
+Z 53
+Z 54
+Z 55
+Z 56
+Z 57
+Z 58
+B 59

@@ -1,10 +1,21 @@
 // A program to convert Forth block files to and from
-// a text format that works well with git.
+// a text format (.fx) that works reasonably well with git.
 //
 // Andrew McKewan, 25-Nov-2025
 //
-// $ blk2txt e < blocks.fb > blocks.fb.txt
-// $ blk2txt d < blocks.fb.txt > blocks.fb
+// Usage:
+//    $ blk2txt e  < blocks.fb     > blocks.fb.fx  # encode
+//    $ blk2txt d  < blocks.fb.fx  > blocks.fb     # decode
+//
+// A block is written to the .fx file in one of three ways:
+//    B blk   Blank block
+//    Z blk   Zero block
+//    S blk   Screen block, followed by 16 lines
+//            non-printable lines are base64 encoded
+//
+// blk is written for documentation, the decoder
+// is stream-based (no lseek) and ignores it.
+//
 
 #include <stdio.h>
 #include <string.h>
@@ -35,7 +46,7 @@ void print_text(const char* line) {
   fwrite(line, 1, len, stdout);
 }
 
-int is_ascii(const char *line, int len) {
+int is_text(const char *line, int len) { // true if all text
   for (int i = 0; i < len; i++) {
     if (line[i] < 32 || line[i] > 126)
       return 0;
@@ -43,16 +54,43 @@ int is_ascii(const char *line, int len) {
   return 1;
 }
 
-// Encode stdin 64 bytes at a time (a line from a block) to
-// stdout as ASCII. Non-ASCII lines are encoded in base64.
+int is_filled_with(const char *line, int len, char c) {
+  for (int i = 0; i < len; i++) {
+    if (line[i] != c)
+      return 0;
+  }
+  return 1;
+}
+
+int encode_block(int blk, const char *block) {
+  // static int in_text = 0;
+  if (is_filled_with(block, 1024, ' ')) {
+    printf("B %d\n", blk);
+  } else if (is_filled_with(block, 1024, 0)) {
+    printf("Z %d\n", blk);
+  } else {
+    printf("S %d\n", blk);
+    const char *line = block;
+    for (int ln = 0; ln < 16; ln++, line+=64) {
+      if (is_text(line, 64)) {
+        print_text(line);
+      } else {
+        print_base64(line);
+      }
+      putchar('\n');
+    }
+  }
+  return 0;
+}
+
+// Encode stdin 1024 bytes at a time (a block) and encode to
+// stdout as printable ASCII. Non-text lines are encoded
+// in base64.
 int encode_stdin() {
-  char line[64];
-  while (fread(line,1,64,stdin) == 64) {
-    if (is_ascii(line, 64))
-      print_text(line);
-    else
-      print_base64(line);
-    putchar('\n');
+  char block[1024];
+  int blk = 0;
+  while (fread(block, sizeof block, 1, stdin) == 1) {
+    encode_block(blk++, block);
   }
   return 0;
 }
@@ -82,20 +120,48 @@ void decode_line(const char *line, unsigned char *out) {
   }
 }
 
-// Decode text from stdin into a Forth block file at stdout.
-int decode_stdin() {
-  char line[90]; // 88 + \n
-  unsigned char out[66]; // +2 for padding
-  while (fgets(line, sizeof line, stdin)) {
-    int len = strlen(line);
-    if (len && line[len-1] == '\n') line[--len] = 0;
+int trim(char *line) { // remove trailing newline, return len
+  int len = strlen(line);
+  if (len && line[len-1] == '\n') line[--len] = 0;
+  return len;
+}
+
+// read 16 lines, check for base64 encoding, write 1024 bytes
+int decode_screen() {
+  for (int ln=0; ln<16; ln++) {
+    char line[128];
+    unsigned char out[64+2]; // +2 for base64 padding
+    if (!fgets(line, sizeof line, stdin)) return -1;
+    int len = trim(line);
     if (len > 64) { // base64 (88 chars)
       decode_line(line, out);
-    } else {
+    } else { // plain text
       memset(out, ' ', 64);
       memcpy(out, line, len);
     }
     fwrite(out, 1, 64, stdout);
+  }
+  return 0;
+}
+
+void decode_solid(char c) {
+  char block[1024];
+  memset(block, c, sizeof block);
+  fwrite(block, sizeof block, 1, stdout);
+}
+
+// Decode text from stdin into a Forth block file at stdout.
+int decode_stdin() {
+  char line[128];
+  while (fgets(line, sizeof line, stdin)) {
+    switch (line[0]) {
+      case 'B': decode_solid(' '); break;
+      case 'Z': decode_solid(0); break;
+      case 'S': decode_screen(); break;
+      default:
+        fprintf(stderr, "Invalid line %s", line);
+        return -1;
+    }
   }
   return 0;
 }
