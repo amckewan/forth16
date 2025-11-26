@@ -14,39 +14,22 @@ AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
 AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
 AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
-( This screen has stuff )
-a new line
 
-THREE
 
 
-: HI 9 LOAD 10 LOAD ; ( electives )
 
 
-line 8
-line 9
-line 10
-FOO
 
 
 
-123456ABC03456abc0456789012345678901234567890123419NOV25AM
 
-this is the NEW! line two!
-Threeeee!
-three
 
-: HI 9 LOAD ; ( electives )
 
 
 
 
-line 8
-line 9
-line 10
 
 
-( Screen 3 is right here )
 
 
 
@@ -94,11 +77,6 @@ line 10
 
 
 
-( Assembler)
-1 CONSTANT S   2 CONSTANT R
-: OP, ( n op -)   OR C, ;
-: LDR ( reg -)   10 OP, ;   : STR ( reg -)   18 OP, ;
-: LDI ( n -)   10 C, , ;
 
 
 
@@ -142,13 +120,7 @@ line 10
 
 
 
-( Extensions)
-12 LOAD ( gforth )
-[DEFINED] EMPTY [IF] EMPTY [THEN] MARKER EMPTY
-ONLY FORTH ALSO DEFINITIONS DECIMAL
 
-10 LOAD  11 LOAD
-30 LOAD ( editor )
 
 
 
@@ -158,7 +130,35 @@ ONLY FORTH ALSO DEFINITIONS DECIMAL
 
 
 
-( Screen index )  FORTH DEFINITIONS
+
+
+
+
+
+
+
+
+
+
+
+
+( Electives)   FORTH DEFINITIONS DECIMAL
+( Utils)  10 LOAD  11 LOAD
+( Editor)  30 LOAD
+
+
+GILD
+
+
+
+
+
+
+
+
+
+
+( Screen index )
 : USED? ( scr -- f )   0 SWAP BLOCK C/L BOUNDS DO
    I C@ BL < IF DROP 0 LEAVE THEN  I C@ BL > +  LOOP ;
 : INDEX ( start end -- )  1+ SWAP DO
@@ -167,14 +167,14 @@ ONLY FORTH ALSO DEFINITIONS DECIMAL
    I 3 MOD 0= IF CR THEN  I 4 .R SPACE
    I USED? IF I BLOCK 19 TYPE ELSE 19 SPACES THEN  SPACE LOOP ;
 
+1024 CONSTANT B/BUF
 : COPY ( from to -)   SWAP BLOCK SWAP BUFFER B/BUF MOVE UPDATE ;
 
 
 
 
 
-
-\ String operators                                    04Apr84map
+( String operators from F83)
 \ Delete count chars at the start of the buffer, blank to end
 : DELETE   ( buffer size count -- )
    OVER MIN >R  R@ - ( left over )  DUP 0>
@@ -190,12 +190,6 @@ ONLY FORTH ALSO DEFINITIONS DECIMAL
 
 
 
-( gforth )   ONLY FORTH ALSO DEFINITIONS DECIMAL
-1024 CONSTANT B/BUF
-: L   SCR @ LIST ;
-: N    1 SCR +! ;
-: B   -1 SCR +! ;
-: VOCABULARY ( n)   DROP VOCABULARY ;
 
 
 
@@ -478,23 +472,29 @@ ONLY FORTH ALSO DEFINITIONS DECIMAL
 
 
 
-( Editor )
-FORTH DEFINITIONS DECIMAL
-HEX 0031 VOCABULARY EDITOR DECIMAL
 
-: L   SCR @ LIST ;
-: N    1 SCR +! ;
-: B   -1 SCR +! ;
 
+
+
+
+
+( Editor )   DECIMAL
 
 : F83-SEARCH   ( sadr slen badr blen -- n f )
    DUP >R  2SWAP SEARCH DUP IF  R@ ROT - SWAP  THEN
    ROT R> 2DROP ;
 
-31 37 THRU
+EDITOR DEFINITIONS   31 38 THRU   FORTH DEFINITIONS
+
+: LIST   EDITOR [ EDITOR ] LIST ; FORTH
+: L   SCR @ LIST ;
+: N    1 SCR +!  L ;
+: B   -1 SCR +!  L ;
 
 
-\ Move the Editor's cursor around                     16Oct83map
+
+
+( Move the Editor's cursor around)
 VARIABLE R# ( cursor, 0-1023)
 : TOP          ( -- )      0 R# ! ;
 : C            ( n -- )    R# @ + B/BUF MOD R# ! ;
@@ -510,7 +510,7 @@ VARIABLE R# ( cursor, 0-1023)
 : #END         ( -- n )    #REMAINING COL# +  ;
 
 
-\ buffers                                             11Mar84map
+( Editor buffers)
 VARIABLE CHANGED
 : MODIFIED   ( -- )   CHANGED ON  UPDATE ;
 : ?TEXT   ( adr -- adr+1 n )   >R  94 PARSE DUP
@@ -526,7 +526,7 @@ VARIABLE CHANGED
 : KEEP   ( -- )   'LINE C/L 'INSERT  PLACE  ;
 
 
-\ buffers                                             11Mar84map
+( Editor buffers)
 : K   ( -- )   'FIND PAD  C/PAD CMOVE
    'INSERT 'FIND  C/PAD CMOVE   PAD 'INSERT  C/PAD CMOVE  ;
 : W   ( -- )   SAVE-BUFFERS  ;
@@ -542,7 +542,7 @@ VARIABLE CHANGED
 
 
 
-\ line editing                                        01Apr84map
+( Line editing)
 : I   ( -- )   (I)  INSERT  C ;
 : O   ( -- )   (I)  REPLACE C ;
 : P   ( -- )   'INSERT ?TEXT DROP 'LINE C/L CMOVE MODIFIED ;
@@ -564,7 +564,7 @@ VARIABLE CHANGED
 : ?ENOUGH ( n)   1+ DEPTH > ABORT" arg?" ;
 : S   ( n - )   1 ?ENOUGH   FIND?
    IF  'F+ C  EXIT  THEN  DROP  FALSE OVER SCR @
-   DO   N TOP  'FIND COUNT 'CURSOR #REMAINING F83-SEARCH
+   DO   1 SCR +! TOP  'FIND COUNT 'CURSOR #REMAINING F83-SEARCH
      IF  'F+ C DROP TRUE LEAVE  ELSE  DROP  THEN
      KEY? ABORT" Break!"
    LOOP  ?MISSING ;
@@ -574,7 +574,7 @@ VARIABLE CHANGED
 : TILL    ( -- )   'C#A (TILL)  'F+  DELETE ;
 : J       ( -- )   'C#A (TILL)  DELETE ;
 : KT      ( -- )   'CURSOR (TILL)  'F+  'INSERT PLACE  ;
-( Enter new lines)
+( Editor new lines )
 : NEW ( n)   16 SWAP
    DO [ FORTH ] I [ EDITOR ] DUP T  CR 2 .R SPACE  QUERY
       #TIB @ IF  P  ELSE  LEAVE  THEN
@@ -590,19 +590,227 @@ VARIABLE CHANGED
 
 
 
-( Line display)
-: .LINE   'LINE COL# TYPE  94 EMIT  'CURSOR #AFTER TYPE
-   LINE# 3 .R SPACE ;
-: ?LINE   >IN @ #TIB @ = IF  CR .LINE  THEN ;
+( Editor display)
+: .ROW ( row)  DUP 2 .R SPACE  C/L * 'START +  C/L TYPE ;
+: .LINE   LINE# 2 .R SPACE
+   'LINE COL# TYPE  94 EMIT  'CURSOR #AFTER TYPE ;
 
-: T DEPTH IF T THEN ?LINE ;
-: F F ?LINE ;   : S S ?LINE ;   : E E ?LINE ;   : D D ?LINE ;
-: R R ?LINE ;   : J J ?LINE ;   : TILL TILL ?LINE ;
+: LIST ( n)   DUP SCR !  ." SCR " .
+   16 0 DO  [ FORTH ] I [ EDITOR ]  CR
+      DUP LINE# = IF DROP .LINE ELSE .ROW THEN ." |"
+   LOOP ;
 
-: N N L ;   : B B L ;
 
-FORTH DEFINITIONS
-: LIST   EDITOR LIST ;
+
+
+
+
+
+( Editor line display)
+( Display current line if there are no more commands)
+: ?L   >IN @ #TIB @ = IF  CR .LINE  THEN ;
+
+: T DEPTH IF T THEN ?L ;
+: F F ?L ;   : S S ?L ;   : E E ?L ;   : D D ?L ;
+: O O ?L ;   : R R ?L ;   : I I ?L ;   : J J ?L ;
+: TILL TILL ?L ;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+( Assembler )
+FORTH DEFINITIONS   HEX 0013 VOCABULARY ASSEMBLER
+
+( mem access, define as needed)
+: AHERE HERE ;
+: AC@ C@ ;   : AC! C! ;
+: A@ @ ;     : A! ! ;
+
+
+
+
+
+
+
+
+
+( Assembler)
+ASSEMBLER DEFINITIONS HEX
+0 CONSTANT T   1 CONSTANT S   2 CONSTANT R   3 CONSTANT P
+4 CONSTANT I   5 CONSTANT W
+: OP, ( n op -)   OR TC, ;
+: LD ( r)   ?DUP IF  10 OP,  ELSE  10 TC, T,  THEN ;
+: ST ( r)   DUP 0= ABORT" T?"  18 OP, ;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

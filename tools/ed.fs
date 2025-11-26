@@ -149,6 +149,8 @@ VARIABLE CHANGED
 : D D ?LINE ;
 : R R ?LINE ;
 : TILL TILL ?LINE ;
+: I I ?LINE ;
+: O O ?LINE ;
 : J J ?LINE ;
 
 : N N L ;

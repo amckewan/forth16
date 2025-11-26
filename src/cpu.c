@@ -63,17 +63,23 @@ void cpu_run(void) {
             case 0x0E:
             case 0x0F:  break;
 
-            // Load T from register or immed.
-            case 0x10:  T = *P++;  break; // LDI8
-            case 0x11:  T = va(S); break; // S LDR
-            case 0x12:  T = va(R); break; // R LDR
-            case 0x13:  T = va(P); break; // P LDR
-            // Store T to register
-            case 0x18:  T = P[0] | (P[1] << 8), P+=2; break; // LDI16
-            case 0x19:  S = ptr(T); break;
-            case 0x1A:  R = ptr(T); break;
-            case 0x1B:  P = ptr(T); break;
+            // 10-17 Load T from register or immed.
+            case 0x10:  T = P[0] | (P[1] << 8), P+=2; break;
+            case 0x11:  T = va(S); break;
+            case 0x12:  T = va(R); break;
+            case 0x13:  T = va(P); break;
+            case 0x14:  T = va(I); break;
+            case 0x15:  T = va(W); break;
 
+            // 18-1F Store T to register (aligned)
+            case 0x18:  break;
+            case 0x19:  S = ptr(T & 0xFFFE); break;
+            case 0x1A:  R = ptr(T & 0xFFFE); break;
+            case 0x1B:  P = ptr(T);          break;
+            case 0x1C:  I = ptr(T & 0xFFFE); break;
+            case 0x1D:  W = ptr(T & 0xFFFE); break;
+
+            // 20-
 
             case 0x30:  I = ptr(*R++),  NEXT // EXIT
             case 0x31:  push va(W + 1), NEXT // DOVAR

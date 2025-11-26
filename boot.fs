@@ -1,14 +1,16 @@
 ( Initialization file for gforth )
-\ gforth boot.fs -e hi
+\ This provides some comatibilit with Forth16 so
+\ we can load the same source blocks.
+\ to start:  $ gforth boot.fs -e hi
 
-ONLY FORTH ALSO DEFINITIONS DECIMAL
+ONLY FORTH DEFINITIONS DECIMAL
 warnings off
 
 \ : marker, ( -- mark ) \ builds marker at HERE
 \ : marker! ( mark -- ) \ restores state
 variable golden
 : GILD    align marker, golden ! ;
-: EMPTY   golden @ marker! ;
+: EMPTY   golden @ marker!  gild ;
 
 \ Simulate polyFORTH-style vocabularies.
 \ CONTEXT specifies the search order, up to 4 wordlists.
@@ -22,8 +24,8 @@ WORDLIST WORDLIST WORDLIST WORDLIST WORDLIST
 EDITOR ASSEMBLER FORTH-WORDLIST 
 CREATE WORDLISTS  , , , , , , , ,
 
-variable 'context
-variable 'current
+variable 'context   1 'context !
+variable 'current   1 'current !
 
 : 'wid ( n - a)  15 and 1- 2/ cells wordlists + ;
 
@@ -38,7 +40,7 @@ variable 'current
 : VOCABULARY ( n)  create , does> @ voc>order ;
 
 : DEFINITIONS   'context @ 'current !  definitions ;
-: :   :  CURRENT @ CONTEXT !  'current @ voc>order ; \ NON-STANDARD!
+: :   :  'current @ voc>order ; \ Classic, NON-STANDARD!
 
 HEX
 0001 VOCABULARY FORTH
@@ -49,10 +51,6 @@ DECIMAL
 FORTH DEFINITIONS
 : HI   9 LOAD ;
 
-1024 CONSTANT B/BUF
-: L   SCR @ LIST ;
-: N    1 SCR +!  L ;
-: B   -1 SCR +!  L ;
 
 
 warnings on
