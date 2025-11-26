@@ -26,4 +26,4 @@ encode: blk2txt
 	./blk2txt e  < blocks.fb  > blocks.fb.fs
 
 clean:
-	@rm -f vm blk2txt
+	@rm -f vm blk2txt a.out
