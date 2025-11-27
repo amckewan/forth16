@@ -1,8 +1,9 @@
-# forth16
-The goal of this project is to build an 80s-era
-16-bit Forth environment to play with.
+# Forth16
+The goal of this project is to build a 1980s-style
+Forth environment to play with.
 
-There is a virtual machine, written in C, consisting of:
+Forth16 is a 16-bit indirect-threaded Forth that is implemented
+on top of a virtual machine, written in C, consisting of:
 
 1. 16-bit stack-oriented integer CPU
 2. 64K byte-addressed memory
@@ -14,14 +15,12 @@ function from the editline library (-ledit).
 
 Blocks are stored in `blocks.fb` which is the same as gforth.
 
-The CPU fetches 8-bit instructions from the VM's memory
-and executes them with a `switch` statement.
-This is the machine or assembly language.
+This leans on lots of prior work, but heavy reference to F83
+and a 1980s polyFORTH manual from GreenArrays.
 
-Implemented on that is a 16-bit, indirect-threaded, Forth.
-
-This leans on lots of prior work, but heavy reference to F83,
-Starting Forth, and ideas from a 1980s polyFORTH manual.
+# TODO
+- 
+- 
 
 # CPU
 The CPU is a byte-code interpreter with a forth-like instruction set.
@@ -42,6 +41,8 @@ and are not accessable from other functions.
 5 | W | Word pointer for ITC
 
 # Credits
-https://base64.sourceforge.net/b64.c
-
+[Base64](https://base64.sourceforge.net/b64.c)
 Copyright (c) 2001 Bob Trower, Trantor Standard Systems Inc.
+
+[polyFORTH Reference Manual](https://www.greenarraychips.com/home/documents/greg/DB005-120825-PF-REF.pdf)
+

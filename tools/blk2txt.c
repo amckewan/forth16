@@ -54,31 +54,23 @@ int is_text(const char *line, int len) { // true if all text
   return 1;
 }
 
-int is_filled_with(const char *line, int len, char c) {
-  for (int i = 0; i < len; i++) {
-    if (line[i] != c)
+int is_filled_with(const char *block, char c) {
+  for (int i = 0; i < 1024; i++) {
+    if (block[i] != c)
       return 0;
   }
   return 1;
 }
 
-int encode_block(int blk, const char *block) {
-  // static int in_text = 0;
-  if (is_filled_with(block, 1024, ' ')) {
-    printf("B %d\n", blk);
-  } else if (is_filled_with(block, 1024, 0)) {
-    printf("Z %d\n", blk);
-  } else {
-    printf("S %d\n", blk);
-    const char *line = block;
-    for (int ln = 0; ln < 16; ln++, line+=64) {
-      if (is_text(line, 64)) {
-        print_text(line);
-      } else {
-        print_base64(line);
-      }
-      putchar('\n');
+int encode_block(const char *block) {
+  const char *line = block;
+  for (int ln = 0; ln < 16; ln++, line+=64) {
+    if (is_text(line, 64)) {
+      print_text(line);
+    } else {
+      print_base64(line);
     }
+    putchar('\n');
   }
   return 0;
 }
@@ -89,9 +81,26 @@ int encode_block(int blk, const char *block) {
 int encode_stdin() {
   char block[1024];
   int blk = 0;
+  char fill = -1;
   while (fread(block, sizeof block, 1, stdin) == 1) {
-    encode_block(blk++, block);
+    if (is_filled_with(block, ' ')) {
+      if (fill != ' ') {
+        printf("B %d\n", blk);
+        fill = ' ';
+      }
+    } else if (is_filled_with(block, 0)) {
+      if (fill != 0) {
+        printf("Z %d\n", blk);
+        fill = 0;
+      }
+    } else {
+      printf("S %d\n", blk);
+      encode_block(block);
+      fill = -1;
+    }
+    blk++;
   }
+  printf("E %d\n", blk);
   return 0;
 }
 
@@ -127,7 +136,7 @@ int trim(char *line) { // remove trailing newline, return len
 }
 
 // read 16 lines, check for base64 encoding, write 1024 bytes
-int decode_screen() {
+int decode_block() {
   for (int ln=0; ln<16; ln++) {
     char line[128];
     unsigned char out[64+2]; // +2 for base64 padding
@@ -144,22 +153,39 @@ int decode_screen() {
   return 0;
 }
 
-void decode_solid(char c) {
+void write_filled_block(char c) {
   char block[1024];
   memset(block, c, sizeof block);
   fwrite(block, sizeof block, 1, stdout);
 }
 
+void write_missing_blocks(int blk, int scr, char fill) {
+  while (blk++ < scr) {
+    write_filled_block(fill);
+  }
+}
+
 // Decode text from stdin into a Forth block file at stdout.
 int decode_stdin() {
   char line[128];
+  int last = -1;
+  char fill = ' ';
   while (fgets(line, sizeof line, stdin)) {
-    switch (line[0]) {
-      case 'B': decode_solid(' '); break;
-      case 'Z': decode_solid(0); break;
-      case 'S': decode_screen(); break;
+    char code; int blk;
+    if (sscanf(line, "%c %d", &code, &blk) != 2) {
+      fprintf(stderr, "Invalid line: %s", line);
+      return -1;
+    }    
+    while (++last < blk) { // write missing blocks
+      write_filled_block(fill);
+    }
+    switch (code) {
+      case 'B': write_filled_block(fill = ' '); break;
+      case 'Z': write_filled_block(fill = 0); break;
+      case 'S': decode_block(); break;
+      case 'E': return 0;
       default:
-        fprintf(stderr, "Invalid line %s", line);
+        fprintf(stderr, "Invalid code: %s", line);
         return -1;
     }
   }
