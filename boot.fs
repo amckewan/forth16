@@ -12,46 +12,41 @@ variable golden
 : GILD    align marker, golden ! ;
 : EMPTY   golden @ marker!  gild ;
 
-\ Simulate polyFORTH-style vocabularies.
+\ Simulate polyFORTH vocabularies. There are 8 wordlists,
+\ 1=FORTH, 2=ASSEMBLER, 3=EDITOR, 4-8 unassigned.
 \ CONTEXT specifies the search order, up to 4 wordlists.
-\ There are up to 8 wordlists, 1=FORTH, 3=ASSEMBLER, 5=EDITOR,
-\ 5 more for apps
 
-WORDLIST CONSTANT ASSEMBLER \ nice for order
+WORDLIST CONSTANT ASSEMBLER \ names for order
 WORDLIST CONSTANT EDITOR
 
 WORDLIST WORDLIST WORDLIST WORDLIST WORDLIST 
 EDITOR ASSEMBLER FORTH-WORDLIST 
-CREATE WORDLISTS  , , , , , , , ,
 
-variable 'context   1 'context !
-variable 'current   1 'current !
+CREATE CONTEXT 0 ,   , , , , , , , ,
+CREATE CURRENT 0 ,
 
-: 'wid ( n - a)  15 and 1- 2/ cells wordlists + ;
+: 'WID ( v - a )  CELLS CONTEXT + ;
 
-: voc>order ( n)
-   dup 'context !  0 swap ( order n)
-   begin ?dup while
-      dup 12 rshift 15 and ?dup if ( order n v# )
-         swap >r  'wid @ swap 1+ ( +order )  r>
-      then  4 lshift $ffff and
-   repeat set-order ;
+: VOC>ORDER ( n - wids #wids )
+   DUP CONTEXT !  0 SWAP ( order n)
+   BEGIN ?DUP WHILE
+      DUP 12 RSHIFT ?DUP IF ( order n v )
+         SWAP >R  'WID @ SWAP 1+  R>  ( +order n )
+      THEN  4 LSHIFT ( next)  $FFFF AND ( for gforth )
+   REPEAT ;
 
-: VOCABULARY ( n)  create , does> @ voc>order ;
+: VOCABULARY ( n)  CREATE , DOES> @ VOC>ORDER SET-ORDER ;
 
-: DEFINITIONS   'context @ 'current !  definitions ;
-: :   :  'current @ voc>order ; \ Classic, NON-STANDARD!
+: DEFINITIONS   CONTEXT @ CURRENT !  DEFINITIONS ;
+: :   :  CURRENT @ VOC>ORDER SET-ORDER ; \ NON-STANDARD!
 
 HEX
 0001 VOCABULARY FORTH
-0013 VOCABULARY ASSEMBLER
-0015 VOCABULARY EDITOR
+0012 VOCABULARY ASSEMBLER
+0013 VOCABULARY EDITOR
 DECIMAL
 
 FORTH DEFINITIONS
 : HI   9 LOAD ;
 
-
-
 warnings on
-
