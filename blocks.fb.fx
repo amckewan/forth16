@@ -44,7 +44,7 @@ S 10
    I USED? IF I BLOCK 19 TYPE ELSE 19 SPACES THEN  SPACE LOOP ;
 
 1024 CONSTANT B/BUF
-: COPY ( from to -)   SWAP BLOCK SWAP BUFFER B/BUF MOVE UPDATE ;
+: COPY ( from to -)  SWAP BLOCK SWAP BUFFER B/BUF MOVE UPDATE ;
 
 
 
@@ -52,22 +52,40 @@ S 10
 
 S 11
 ( String operators from F83)
-\ Delete count chars at the start of the buffer, blank to end
+( Delete count chars at the start of the buffer, blank to end)
 : DELETE   ( buffer size count -- )
    OVER MIN >R  R@ - ( left over )  DUP 0>
    IF  2DUP SWAP DUP R@ + -ROT SWAP CMOVE  THEN  + R> BLANK ;
 
-\ Insert a string into the start of the buffer, end chars lost
+( Insert a string into the start of the buffer, end chars lost)
 : INSERT   ( string length buffer size -- )
    ROT OVER MIN >R  R@ - ( left over )
    OVER DUP R@ +  ROT CMOVE>   R> CMOVE  ;
 
-\ Overwrite string at the start of buffer
-: REPLACE   ( string length buffer size -- )  ROT MIN CMOVE ;
+( Overwrite string at the start of buffer)
+: REPLACE ( string length buffer size -- )  ROT MIN CMOVE ;
 
 
 
 B 12
+S 15
+( Cross compiler)  EMPTY
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+B 16
 S 30
 ( Editor )   DECIMAL
 
@@ -77,10 +95,10 @@ S 30
 
 EDITOR DEFINITIONS   31 38 THRU   FORTH DEFINITIONS
 
-: LIST   EDITOR [ EDITOR ] LIST ; FORTH
-: L   SCR @ LIST ;
-: N    1 SCR +!  L ;
-: B   -1 SCR +!  L ;
+: LIST ( n)   [ EDITOR ] LIST EDITOR ; FORTH
+
+
+
 
 
 
@@ -188,9 +206,10 @@ S 36
 
 
 S 37
-( Editor display)
-: .ROW ( row)  DUP 2 .R SPACE  C/L * 'START +  C/L TYPE ;
-: .LINE   LINE# 2 .R SPACE
+( Editor LIST)
+: .LN ( n)   2 .R SPACE ;
+: .ROW ( row)  DUP .LN  C/L * 'START +  C/L TYPE ;
+: .LINE   LINE# .LN
    'LINE COL# TYPE  94 EMIT  'CURSOR #AFTER TYPE ;
 
 : LIST ( n)   DUP SCR !  ." Scr " .
@@ -203,19 +222,18 @@ S 37
 
 
 
-
 S 38
-( Line display)
+( Editor UI)
 ( Display current line if there are no more commands)
 : ?L   >IN @ #TIB @ = IF  CR .LINE  THEN ;
 
-: T DEPTH IF T THEN ?L ;
+: T ( n - )   DEPTH IF T THEN ?L ;
+
 : F F ?L ;   : S S ?L ;   : E E ?L ;   : D D ?L ;
 : O O ?L ;   : R R ?L ;   : I I ?L ;   : J J ?L ;
 : TILL TILL ?L ;
 
-
-
+: L  SCR @ LIST ;   : N  1 SCR +! L ;   : B  -1 SCR +! L ;
 
 
 
