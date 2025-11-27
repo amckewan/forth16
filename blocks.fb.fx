@@ -70,6 +70,42 @@ S 11
 B 12
 S 15
 ( Cross compiler)  EMPTY
+( Following polyFORTH manual)   HEX
+0017 VOCABULARY HOST  IMMEDIATE  HOST DEFINITIONS
+0179 VOCABULARY ASSEMBLER
+000B VOCABULARY TARGET ( Target's FORTH )
+
+0071 VOCABULARY FORTH  IMMEDIATE  DECIMAL
+
+( Memory) 16 LOAD
+( Save) 17 LOAD
+( Heads) 18 LOAD
+
+
+
+
+
+S 16
+( Target memory )
+CREATE IMAGE ( 8K )  HERE 8192  DUP ALLOT ERASE
+: TC@ ( ta -- u8 )   IMAGE + C@ ;
+: TC! ( u8 ta -- )   IMAGE + C! ;
+: T@  ( ta -- u16 )  DUP TC@  SWAP 1+ TC@  8 LSHIFT OR ;
+: T!  ( u16 ta -- )  2DUP TC!  SWAP 8 RSHIFT SWAP  1+ TC! ;
+
+VARIABLE H
+: HERE  ( -- taddr )   H @ ;
+: ALLOT ( n -- )       H +! ;
+: C,    ( char -- )    HERE TC!   1 H +! ;
+: ,     ( n -- )       HERE  T!   2 H +! ;
+: S, ( addr len -- )   0 ?DO  COUNT C,  LOOP DROP ;
+
+: ALIGN ( -- )   HERE 1 AND IF 0 C, THEN ;
+
+S 17
+( Save image)
+( Just 1 block for now)
+: SAVE   IMAGE 0 BUFFER B/BUF CMOVE UPDATE ;
 
 
 
@@ -83,9 +119,24 @@ S 15
 
 
 
-
-
-B 16
+S 18
+( Create target words)
+CREATE CONTEXT   FORTH 1 , HERE 8 CELLS DUP ALLOT ERASE HOST
+VARIABLE CURRENT   1 CURRENT !
+VARIABLE WIDTH     3 DUP WIDTH C! WIDTH 1+ C!
+VARIABLE LAST ( nfa)
+: HASH ( str voc - 'link)
+   2/  SWAP 1+ C@ +  7 AND  1+ CELLS CONTEXT + ;
+: NFA, ( str -)   HERE LAST !  COUNT DUP $80 OR C,
+   WIDTH C@ MIN  1 ?DO COUNT C, LOOP  C@ $80 OR C,
+   WIDTH 1+ C@ WIDTH C! ;
+: TOGGLE ( n)   LAST @  DUP TC@ ROT XOR  SWAP TC! ;
+: SMUDGE      $20 TOGGLE ;
+: IMMEDIATE   $40 TOGGLE ;
+: HEAD,   ALIGN HERE  BL WORD  DUP CURRENT @ HASH
+   DUP @ , ROT SWAP !  NFA, ;
+: W BL WORD PAD OVER C@ 1+ CMOVE PAD ;
+B 19
 S 30
 ( Editor )   DECIMAL
 
@@ -95,7 +146,7 @@ S 30
 
 EDITOR DEFINITIONS   31 38 THRU   FORTH DEFINITIONS
 
-: LIST ( n)   [ EDITOR ] LIST EDITOR ; FORTH
+: LIST ( n)   [ EDITOR ] TOP LIST EDITOR ; FORTH
 
 
 
@@ -234,7 +285,7 @@ S 38
 : TILL TILL ?L ;
 
 : L  SCR @ LIST ;   : N  1 SCR +! L ;   : B  -1 SCR +! L ;
-
+: LL  TOP L ;
 
 
 
