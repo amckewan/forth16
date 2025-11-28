@@ -12,15 +12,13 @@ typedef uint32_t  u32;
 typedef  int64_t  i64;
 typedef uint64_t  u64;
 
-extern u8 vmem[65536]; // 64K Forth memory
-
 #define ptr(va)     ((void*)(vmem + (u16)(va)))
 #define va(ptr)     ((u8*)(ptr) - vmem)
 
 // cpu
-void cpu_run(void);
+int cpu_run(u16 start, u8 *vmem);
 
-i16 swi(i16 service, i16 arg[]);
+i16 *bios(i16 service, i16 *S, u8 *vmem);
 
 // misc. lib functions
 char *malloc_cstr(const void *adr, int len);

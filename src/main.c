@@ -5,6 +5,8 @@
 
 #include "vm.h"
 
+static u8 vmem[65536]; // 64K Forth memory
+
 static const char blockfile[] = "blocks.fb"; // same as gforth
 
 int main() {
@@ -20,8 +22,9 @@ int main() {
         fprintf(stderr, "Cannot read boot block from %s\n", blockfile);
         return 2;
     }
-    cpu_run();
 
-    fprintf(stderr, "Forth16 VM exit\n");
-    return 0;
+    int rc = cpu_run(0, vmem);
+
+    fprintf(stderr, "VM exit %d\n", rc);
+    return rc;
 }
