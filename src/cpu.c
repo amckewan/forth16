@@ -12,13 +12,15 @@
 #define pop2  T = S[1], S += 2
 #define pop3  T = S[2], S += 3
 #define LOGICAL ? -1 : 0
+#define LIT   (P[0] | (P[1] << 8))
 
 
 // test programs
+// #define sample hello
+#ifdef sample
 u8 bye[] = {7,0,0, 7,0,0, 8, 255}; // 0 # 0 # SWI
 u8 hello[] = { 7,11,0,  7,3,0,  7,1,0,  8,  255,  'h','i','\n'};
-
-// #define sample hello
+#endif
 
 int cpu_run(u16 start, u8 *vmem) {
     i16  T = 0;
@@ -33,9 +35,9 @@ int cpu_run(u16 start, u8 *vmem) {
 #ifdef sample
     memcpy(vmem, sample, sizeof sample);
 #endif
-#if 0
+#if 1
     for (int i = 0; i < 100; i++) {
-        if (i%16 == 0) putchar('\n');
+        if (i && i%16 == 0) putchar('\n');
         printf("%02X ", vmem[i]);
     }   putchar('\n');
     // return 0;
@@ -51,24 +53,24 @@ int cpu_run(u16 start, u8 *vmem) {
             case 0x04:  *--R = va(I), I = (u16*)(P + 1), push va(W + 1), NEXT // DOES
             case 0x05:  I = ptr(*R++),  NEXT // EXIT
             case 0x06:  push *I++; break; // LIT
-            case 0x07:  push (P[0] | (P[1] << 8)), P+=2; break; // #
+            case 0x07:  push LIT, P+=2; break; // #
 
             case 0x08:  S = bios(T, S, vmem); break;
             case 0x09:  *--R = va(P+2); // CALL..
-            case 0x0A:  P = ptr(P[0] | (P[1] << 8)); break; // JMP
+            case 0x0A:  P = ptr(LIT); break; // JMP
             case 0x0B:  P = ptr(*R++); break; // RET  
             case 0x0C:  P += *(i8*)P; break; // BRANCH
 
-            // 10-17 load T from register
-            case 0x10:  break;
+            // 10-17 load T from register or immediate
+            case 0x10:  T = LIT, P+=2; break;
             case 0x11:  T = va(S); break;
             case 0x12:  T = va(R); break;
             case 0x13:  T = va(P); break;
             case 0x14:  T = va(I); break;
             case 0x15:  T = va(W); break;
 
-            // 18-1F store T to register (aligned)
-            case 0x18:  break;
+            // 18-1F store T to register (aligned) or mem
+            case 0x18:  W = ptr(LIT), *W = T, P+=2; break;
             case 0x19:  S = ptr(T & 0xFFFE); break;
             case 0x1A:  R = ptr(T & 0xFFFE); break;
             case 0x1B:  P = ptr(T);          break;

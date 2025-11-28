@@ -9,7 +9,7 @@ CC = clang
 CFLAGS = -Wall -Werror
 CFLAGS += -Ofast
 
-SOURCES = src/main.c src/cpu.c src/lib.c src/console.c src/disk.c src/swi.c 
+SOURCES = src/main.c src/cpu.c src/lib.c src/console.c src/disk.c src/bios.c 
 HEADERS = src/vm.h
 LIBS = -ledit -ldl
 
