@@ -51,6 +51,7 @@ VARIABLE GOLDEN
 : HI   9 LOAD ;
 : CC   S" compiler.fs" INCLUDED ;
 : KK   S" kernel.fs" INCLUDED ;
+: VM   S" make vm" SYSTEM ;
 
 9 BLOCK DROP ( gforth fails when you try 0 first! )
 

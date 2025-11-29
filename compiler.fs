@@ -28,7 +28,7 @@ VARIABLE H
 : ALIGN ( -- )         HERE 1 AND IF 0 C, THEN ;
 
 ( Just 1 block for now)
-: SAVE   IMAGE 0 BUFFER 400 CMOVE  UPDATE ; \ SAVE-BUFFERS ;
+: SAVE   IMAGE 0 BUFFER 400 CMOVE  UPDATE FLUSH ;
 
 ( Create target words)
 CREATE CONTEXT   FORTH 1 , HERE 8 CELLS DUP ALLOT ERASE HOST
@@ -54,30 +54,71 @@ VARIABLE LAST ( nfa)
 [THEN]
 
 ASSEMBLER DEFINITIONS
+: OP ( op)   CREATE FORTH C, DOES> C@ HOST C, ;
+: OP, ( n op)   + C, ; ( not OR!)
 : # ( n -)   07 C, , ;
-: BIOS   08 C, ;
-: DIE   FF C, ;
+08 OP BIOS   FF OP DIE ( invalid opcode)
+: JMP ( a -)   0A C, , ;
 : CALL ( a -)   09 C, , ;
-: RET   0B C, ;
-: LD ( reg -)   ?DUP IF 10 + C, ELSE 10 C, , THEN ;
-: ST ( reg -)   ?DUP IF 18 + C, ELSE 18 C, , THEN ;
+0B OP RET
+: LD ( reg -)   ?DUP IF 10 OP, ELSE 10 C, , THEN ;
+: ST ( reg -)   ?DUP IF 18 OP, ELSE 18 C, , THEN ;
+
+: BEGIN ( - a)   HERE ;
+: UNTIL ( a cond -)   20 OP,  HERE - C, ;
+: AGAIN ( a -)   -14 UNTIL ; ( 0C = unconditional branch )
+: IF ( cond - a)   20 OP,  HERE 0 C, ;
+: THEN ( a -)   HERE OVER -  SWAP TC! ;
+: ELSE ( a - a2)   -14 IF  SWAP THEN ;
+: WHILE    IF SWAP ;
+: REPEAT   AGAIN THEN ;
+: NOT ( cond - !cond)   8 XOR ;
+
+30 OP DUP       31 OP DROP      32 OP SWAP      33 OP OVER
+34 OP ROT       35 OP NIP       36 OP ?DUP      37 OP PICK
+38 OP >R        39 OP R>        3A OP R@
+
+40 OP 2DUP      41 OP 2DROP     42 OP 2SWAP     43 OP 2OVER
+44 OP 2>R       45 OP 2R>       46 OP 2R@
+
+50 OP +         51 OP -         52 OP *         53 OP /
+54 OP MOD       55 OP AND       56 OP OR        57 OP XOR
+58 OP LSHIFT    59 OP RSHIFT    5A OP INVERT    5B OP NEGATE
 
 0 CONSTANT T   1 CONSTANT S   2 CONSTANT R   3 CONSTANT P
 4 CONSTANT I   5 CONSTANT W
+
+0 CONSTANT 0=   1 CONSTANT 0<   2 CONSTANT 0>   3 CONSTANT =
+4 CONSTANT <    5 CONSTANT >    6 CONSTANT U<   7 CONSTANT U>
+
 HOST DEFINITIONS
 
-ASSEMBLER ( tests )
-0 ORG   0B #  3 #  1 # BIOS  DIE  S" OK" S,  0A C,
+: PATCH ( a -)   9 T! ; \ patch "10 JMP" at offset 8
+
+ASSEMBLER
+( init stack and jump to test )
+0 ORG   FF00 T LD  R ST  FE00 T LD  S ST  10 JMP
+
+( print OK )
+10 ORG   18 #  3 #  1 #  BIOS  DIE
+18 ORG   S" OK" S,  0A C,
+
+( subroutine that prints)
+20 ORG   30 #  7 #  1 #  BIOS  RET
+30 ORG   S" Subway" S,  0A C,
 
 ( call/ret)
-0  ORG   FF00 LD  S ST  FE00 LD  R ST
-         20 CALL  DIE
-20 ORG   30 #  4 #  1 #  BIOS  RET
-30 ORG   S" SUB" S,  0A C,
+40 PATCH
+40 ORG   20 CALL  DIE
+
+( loop )
+50 PATCH
+50 ORG   5 #  BEGIN  20 CALL  1 # -  0= UNTIL  DROP  DIE
+
 
 HOST
 
-\  SAVE .( Saved )
+SAVE .( Saved )
 : RUN  S" ./vm" SYSTEM ;
 
 

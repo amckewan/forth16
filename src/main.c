@@ -25,6 +25,6 @@ int main() {
 
     int rc = cpu_run(0, vmem);
 
-    fprintf(stderr, "VM exit %d\n", rc);
+    fprintf(stderr, "VM exit $%02X\n", rc);
     return rc;
 }

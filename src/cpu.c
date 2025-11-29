@@ -35,7 +35,7 @@ int cpu_run(u16 start, u8 *vmem) {
 #ifdef sample
     memcpy(vmem, sample, sizeof sample);
 #endif
-#if 1
+#if 0
     for (int i = 0; i < 100; i++) {
         if (i && i%16 == 0) putchar('\n');
         printf("%02X ", vmem[i]);
@@ -55,7 +55,7 @@ int cpu_run(u16 start, u8 *vmem) {
             case 0x06:  push *I++; break; // LIT
             case 0x07:  push LIT, P+=2; break; // #
 
-            case 0x08:  S = bios(T, S, vmem); break;
+            case 0x08:  S = bios(T, S, vmem), pop; break;
             case 0x09:  *--R = va(P+2); // CALL..
             case 0x0A:  P = ptr(LIT); break; // JMP
             case 0x0B:  P = ptr(*R++); break; // RET  
@@ -70,7 +70,7 @@ int cpu_run(u16 start, u8 *vmem) {
             case 0x15:  T = va(W); break;
 
             // 18-1F store T to register (aligned) or mem
-            case 0x18:  W = ptr(LIT), *W = T, P+=2; break;
+            case 0x18:  W = ptr(LIT), P+=2, *W = T; break;
             case 0x19:  S = ptr(T & 0xFFFE); break;
             case 0x1A:  R = ptr(T & 0xFFFE); break;
             case 0x1B:  P = ptr(T);          break;
@@ -78,100 +78,90 @@ int cpu_run(u16 start, u8 *vmem) {
             case 0x1D:  W = ptr(T & 0xFFFE); break;
 
             // 20-2F conditional branches, 8-bit signed offset
-#define IF(cond)  P += (cond) ? 1 : *(i8*)P
-#define IF1(cond) IF(cond); pop;  break;
-#define IF2(cond) IF(cond); pop2; break;
-            case 0x20:  IF1(T == 0)             // 0= IF
-            case 0x21:  IF1(T < 0)              // 0< IF
-            case 0x22:  IF1(T > 0)              // 0> IF
-            case 0X23:  IF2(*S == T)            //  = IF
-            case 0x24:  IF2(*S < T)             //  < IF
-            case 0x25:  IF2(*S > T)             //  > IF
-            case 0x26:  IF2((u16)*S < (u16)T)   // U< IF
-            case 0x27:  IF2((u16)*S > (u16)T)   // U> IF
+#define IF(cond)  if (cond) P += 1; else P += *(i8*)P; break;
+            case 0x20:  IF(T == 0)
+            case 0x21:  IF(T < 0)
+            case 0x22:  IF(T > 0)
+            case 0X23:  IF(*S == T)
+            case 0x24:  IF(*S < T)
+            case 0x25:  IF(*S > T)
+            case 0x26:  IF((u16)*S < (u16)T) // U<
+            case 0x27:  IF((u16)*S > (u16)T) // U>
 
             // 28-2F are the opposites of 20-27
-            case 0x28:  IF1(T != 0)             // 0= NOT IF
-            case 0x29:  IF1(T >= 0)             // 0< NOT IF
-            case 0x2A:  IF1(T <= 0)             // 0> NOT IF
-            case 0X2B:  IF2(*S != T)            //  = NOT IF
-            case 0x2C:  IF2(*S >= T)            //  < NOT IF
-            case 0x2D:  IF2(*S <= T)            //  > NOT IF
-            case 0x2E:  IF2((u16)*S >= (u16)T)  // U< NOT IF
-            case 0x2F:  IF2((u16)*S <= (u16)T)  // U> NOT IF
+            case 0x28:  IF(T != 0)
+            case 0x29:  IF(T >= 0)
+            case 0x2A:  IF(T <= 0)
+            case 0X2B:  IF(*S != T)
+            case 0x2C:  IF(*S >= T)
+            case 0x2D:  IF(*S <= T)
+            case 0x2E:  IF((u16)*S >= (u16)T)
+            case 0x2F:  IF((u16)*S <= (u16)T)
+
+            // 30-3F stack
+            case 0x30:  *--S = T;               break; // DUP
+            case 0x31:  pop;                    break; // DROP
+            case 0x32:  t = T, T = *S, *S = t;  break; // SWAP
+            case 0x33:  push *S;                break; // OVER
+            case 0x34:  t = S[1], S[1] = *S, *S = T, T = t; break ; // ROT
+            case 0x35:  S++;                    break; // NIP
+            case 0x36:  if (T) *--S = T;        break; // ?DUP
+            case 0x37:  T = S[T];               break; // PICK
+
+            case 0x38:  *--R = T, pop;          break; // >R
+            case 0x39:  push *R++;              break; // R>
+            case 0x3A:  push *R;                break; // R@
+
+            // 40-4F double stack
+            case 0x40:  t = *S, *--S = T, *--S = t;     break; // 2DUP 
+            case 0x41:  pop2;                           break; // 2DROP
+            case 0x42:  t = S[0], S[0] = S[2], S[2] = t,
+                        t = S[1], S[1] = T, T = t;      break; // 2SWAP
+            case 0x43:  t = S[2], *--S = T, *--S = t, T = S[3]; break; // 2OVER
+            case 0x44:  *--R = *S++, *--R = T, pop;     break; // 2>R
+            case 0x45:  push R[1], push R[0], R += 2;   break; // 2R>
+            case 0x46:  push R[1], push R[0];           break; // 2R@
+
+            // 50-5F arithmetic
+            case 0x50:  T = *S++ + T; break; // +
+            case 0x51:  T = *S++ - T; break; // -
+            case 0x52:  T = *S++ * T; break; // *
+            case 0x53:  T = *S++ / T; break; // /
+            case 0x54:  T = *S++ % T; break; // MOD
+            case 0x55:  T = *S++ & T; break; // AND
+            case 0x56:  T = *S++ | T; break; // OR
+            case 0x57:  T = *S++ ^ T; break; // XOR
+            case 0x58:  T = *S++ << T; break; // LSHIFT
+            case 0x59:  T = ((u16)*S++) >> T; break; // RSHIFT
+            case 0x5A:  T = ~T; break; // INVERT 
+            case 0x5B:  T = -T; break; // NEGATE 
 
 
-            case 0x40:  *--S = T; break; // DUP
-            case 0x41:  pop; break; // DROP
-            case 0x42:  t = T; T = *S; *S = t; break; // SWAP
-            case 0x43:  push S[1]; break; // OVER
-            case 0x44:  t = S[1], S[1] = *S, *S = T, T = t; break; // ROT
-            case 0x45:  T = S[T]; break; // PICK
-// CODE NIP   SWAP DROP NEXT
-// CODE TUCK  SWAP OVER NEXT
-// CODE ?DUP   DUP IF DUP THEN NEXT
 
-// CODE >R   >R  NEXT
-            case 100:  *--R = T, pop; break; // >R
-            case 101:  push *R++; break; // R>
-            case 102:  push *R  ; break; // R@
-            case 103:  *--R = *S++, *--R = T, pop;   break; // 2>R
-            case 104:  push R[1], push R[0], R += 2; break; // 2R>
-            case 105:  push R[1], push R[0];         break; // 2R@
 
-            case 110:  T = *S++ + T; break; // +
-            case 111:  T = *S++ - T; break; // -
-            case 112:  T = *S++ * T; break; // *
-            case 113:  T = *S++ / T; break; // /
-            case 117:  T = *S++ % T; break; // MOD
-            case 114:  T = *S++ & T; break; // AND
-            case 115:  T = *S++ | T; break; // OR
-            case 116:  T = *S++ ^ T; break; // XOR
-
-// : OP ( op)   CREATE C,  DOES> C@ C, ;
-// 110 OP +    111 OP -   112 OP *   ... 
-// CODE +   + NEXT
-// CODE @   @ NEXT
-
-            // 88-95 NOTs
-
-// ASSEMBLER
-// : IF ( cond - a)   80 + C,  HERE  0 C, ;
-// : THEN ( a -)   HERE OVER -  SWAP C! ;
-// : ELSE ( a - a2)   -75 IF  SWAP THEN ;
-// : BEGIN ( - a)   HERE ;
-// : UNTIL ( a cond -)   80 + C,  HERE SWAP - C, ;
-// : AGAIN ( a -)   -75 UNTIL ;
-// : WHILE ( a cond - a2 a)   IF SWAP ;
-// : REPEAT ( a a2 -)   AGAIN THEN ;
-// 0 CONSTANT 0=    1 CONSTANT 0<   2 CONSTANT 0>
-// 3 CONSTANT =     4 CONSTANT <    5 CONSTANT  >
-// 6 CONSTANT U<    7 CONSTANT U>
-// : NOT   8 XOR ;
-
-            case 70: { // M*/ ( d1 n1 n2 -- d2)
+            case 0xA0: { // M*/ ( d1 n1 n2 -- d2)
                 int64_t d = S[1] << 16 | S[2];
                 d = d * S[0] / T;
                 S += 2;
                 S[0] = d, T = d >> 16;
                 break;
             }
-            case 71: { // UM* ( u1 u2 -- ud )
+            case 0xA1: { // UM* ( u1 u2 -- ud )
                 unsigned d = (unsigned)S[0] * (unsigned)T;
                 S[0] = d, T = d >> 16;
                 break;
             }
-            case 72: { // M* ( n1 n2 -- d )
+            case 0xA2: { // M* ( n1 n2 -- d )
                 int d = S[0] * T;
                 S[0] = d, T = d >> 16;
                 break;
             }
-            case 73: { // UM/MOD ( ud u -- rem quot )
+            case 0xA3: { // UM/MOD ( ud u -- rem quot )
                 unsigned d = (unsigned)S[0] << 16 | (unsigned)S[1];
                 S[0] = d % T, T = d / T;
                 break;
             }
-            case 74: { // UM* ( u1 u2 -- ud )
+            case 0xA4: { // UM* ( u1 u2 -- ud )
                 unsigned d = (unsigned)S[0] * (unsigned)T;
                 S[0] = d, T = d >> 16;
                 break;
