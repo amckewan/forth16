@@ -7,29 +7,26 @@ ONLY FORTH DEFINITIONS DECIMAL
 warnings off
 
 \ Simulate polyFORTH vocabularies. There are 8 wordlists,
-\ 1=FORTH, 3=ASSEMBLER, 5=EDITOR, 7,9,B,D,F unassigned.
+\ 1=FORTH, 2=ASSEMBLER, 3=EDITOR, 4-8 unassigned.
 \ CONTEXT specifies the search order, up to 4 wordlists.
+WORDLIST WORDLIST WORDLIST WORDLIST 
+WORDLIST WORDLIST WORDLIST FORTH-WORDLIST 
+CREATE WIDS   , , , , , , , ,
 
-WORDLIST ( 3 ) CONSTANT ASSEMBLER \ names for order
-WORDLIST ( 5 ) CONSTANT EDITOR
-WORDLIST ( 7 ) CONSTANT HOST
-WORDLIST ( 9 ) CONSTANT HOST-ASSEMBLER
-WORDLIST ( B ) CONSTANT TARGET-FORTH
-WORDLIST ( D ) CONSTANT TARGET-ASSEMBLER
-WORDLIST ( F ) CONSTANT TARGET-EDITOR
-
-CREATE WIDS
-  FORTH-WORDLIST , ASSEMBLER , EDITOR , HOST , HOST-ASSEMBLER ,
-  TARGET-FORTH , TARGET-ASSEMBLER , TARGET-EDITOR ,
+: WID ( v - a )  15 AND 1- CELLS WIDS + ;
 
 VARIABLE CONTEXT
 VARIABLE CURRENT
 
-: 'WID ( v - a )  15 AND 2/ CELLS WIDS + ;
+: .ORDER ( voc)   BASE @ SWAP  HEX
+   BEGIN  DUP 15 AND .  4 RSHIFT  ?DUP 0= UNTIL  BASE ! ;
+: ORDER   ."  Context: " CONTEXT @ .ORDER
+          ."  Current: " CURRENT @ .ORDER ;
+
 
 : VOC>ORDER ( n - )  0 OVER ( n order n )
    BEGIN  DUP 12 RSHIFT  ?DUP IF ( order n v )
-       SWAP >R  'WID @ SWAP 1+  R>  ( +order n )
+       SWAP >R  WID @ SWAP 1+  R>  ( +order n )
      THEN  4 LSHIFT ( next) $FFFF AND ( gforth)
    ?DUP 0= UNTIL  SET-ORDER  CONTEXT ! ;
 
@@ -39,8 +36,8 @@ VARIABLE CURRENT
 : :   :  CURRENT @ VOC>ORDER ; \ NON-STANDARD!
 
 $0001 VOCABULARY FORTH
-$0013 VOCABULARY ASSEMBLER
-$0015 VOCABULARY EDITOR
+$0012 VOCABULARY ASSEMBLER
+$0013 VOCABULARY EDITOR
 
 FORTH DEFINITIONS
 
@@ -48,12 +45,19 @@ VARIABLE GOLDEN
 : GILD    ALIGN marker, GOLDEN ! ;
 : EMPTY   GOLDEN @ marker!  GILD  FORTH DEFINITIONS ;
 
+( things we expect in the kernel)
+1024 CONSTANT B/BUF
+: 2+   2 + ;
+: 2-   2 - ;
+
+( shorthand )
 : HI   9 LOAD ;
 : CC   S" compiler.fs" INCLUDED ;
 : KK   S" kernel.fs" INCLUDED ;
 : VM   S" make vm" SYSTEM ;
+: RUN  S" ./vm" SYSTEM ;
 
-9 BLOCK DROP ( gforth fails when you try 0 first! )
+9 BLOCK DROP ( gforth fails when you try 0 block first! )
 
 GILD
 warnings on

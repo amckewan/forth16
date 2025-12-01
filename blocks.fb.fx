@@ -77,7 +77,7 @@ S 15
 
 EDITOR DEFINITIONS   16 23 THRU   FORTH DEFINITIONS
 
-: LIST ( n)   [ EDITOR ] TOP LIST EDITOR ; FORTH
+: LIST ( n)   [ EDITOR ] TOP LIST EDITOR DECIMAL ; FORTH
 : L   SCR @ LIST ;
 
 
@@ -222,4 +222,177 @@ S 23
 
 
 B 24
+S 60
+( Target compiler for gforth)  EMPTY HEX
+( Following polyFORTH manual)
+( HOST and HOST'S FORTH are immediate for convenience)
+0014 VOCABULARY HOST        IMMEDIATE
+HOST DEFINITIONS
+0041 VOCABULARY FORTH       IMMEDIATE
+0145 VOCABULARY ASSEMBLER
+0006 VOCABULARY TARGET      ( Target's FORTH )
+DECIMAL
+
+( Target memory)  61 LOAD  62 LOAD
+( Assembler)  63 LOAD
+
+
+
+
+S 61
+( Target memory )
+CREATE IMAGE   HERE 8 B/BUF * DUP ALLOT ERASE
+: TC@ ( ta -- u8 )   IMAGE + C@ ;
+: TC! ( u8 ta -- )   IMAGE + C! ;
+: T@  ( ta -- u16 )  DUP TC@  SWAP 1+ TC@  8 LSHIFT OR ;
+: T!  ( u16 ta -- )  2DUP TC!  SWAP 8 RSHIFT  SWAP 1+ TC! ;
+
+: TMOVE ( a ta u -)  SWAP IMAGE + SWAP  CMOVE ;
+: TDUMP ( ta u -)    SWAP IMAGE + SWAP  DUMP ;
+
+
+
+
+
+
+
+S 62
+( Target dictionary pointer )
+VARIABLE H
+: ORG   ( ta -- )      H ! ;
+: HERE  ( -- taddr )   H @ ;
+: ALLOT ( n -- )       H +! ;
+: C,    ( char -- )    HERE TC!   1 H +! ;
+: ,     ( n -- )       HERE  T!   2 H +! ;
+: S, ( addr len -- )   0 ?DO  COUNT C,  LOOP DROP ;
+: ALIGN ( -- )         HERE 1 AND IF 0 C, THEN ;
+
+( Save just 1 block for now)
+: SAVE   IMAGE 0 BUFFER B/BUF CMOVE  UPDATE FLUSH ;
+
+
+
+
+S 63
+( Target assembler)
+HOST ASSEMBLER DEFINITIONS DECIMAL
+: OP  ( op)   CREATE FORTH C,  DOES> C@ ( op)   HOST C, ;
+: OP# ( op)   CREATE FORTH C,  DOES> C@ ( n op) HOST C, , ;
+: OP, ( n op)   + C, ; ( not OR!)
+
+64 66 THRU
+HOST DEFINITIONS DECIMAL
+
+
+
+
+
+
+
+
+S 64
+( Special ops)  HEX
+00 OP  NEXT
+07 OP# #
+08 OP  BIOS
+09 OP# CALL
+0A OP# JMP
+0B OP  RET
+0D OP  EXECUTE
+
+( Register load and store)
+0 CONSTANT T    1 CONSTANT S    2 CONSTANT R    3 CONSTANT P
+4 CONSTANT I    5 CONSTANT W
+
+: LD ( reg -)   ?DUP IF 10 OP, ELSE 10 C, , THEN ;
+: ST ( reg -)   ?DUP IF 18 OP, ELSE 18 C, , THEN ;
+
+S 65
+( Conditional branches)  HEX
+: BEGIN ( - a)       HERE ;
+: UNTIL ( a cond -)  20 OP,  HERE - C, ;
+: AGAIN ( a -)       -14 UNTIL ; ( 0C = unconditional branch)
+: IF ( cond - a)     20 OP,  HERE 0 C, ;
+: THEN ( a -)        HERE OVER -  SWAP TC! ;
+: ELSE ( a - a2)     -14 IF  SWAP THEN ;
+: WHILE ( a - a2 a)  IF SWAP ;
+: REPEAT ( a2 a -)   AGAIN THEN ;
+
+: NOT ( cond - !cond)   8 XOR ;
+
+0 CONSTANT 0=   1 CONSTANT 0<   2 CONSTANT 0>   3 CONSTANT =
+4 CONSTANT <    5 CONSTANT >    6 CONSTANT U<   7 CONSTANT U>
+
+
+S 66
+( Opcodes 30,40,50)
+30 OP DUP       31 OP DROP      32 OP SWAP      33 OP OVER
+34 OP ROT       35 OP NIP       36 OP ?DUP      37 OP PICK
+38 OP >R        39 OP R>        3A OP R@
+
+40 OP 2DUP      41 OP 2DROP     42 OP 2SWAP     43 OP 2OVER
+44 OP 2>R       45 OP 2R>       46 OP 2R@
+
+50 OP +         51 OP -         52 OP *         53 OP /
+54 OP MOD       55 OP AND       56 OP OR        57 OP XOR
+58 OP LSHIFT    59 OP RSHIFT    5A OP ARSHIFT   5B OP INVERT
+5C OP NEGATE
+
+
+
+
+B 67
+S 69
+( Create target words)  ( patched to ease bootstrap)
+CREATE CONTEXT   FORTH 1 ,  HERE 8 CELLS DUP ALLOT ERASE  HOST
+VARIABLE CURRENT   1 CURRENT !
+VARIABLE WIDTH     31  DUP WIDTH C!  WIDTH 1+ C!
+VARIABLE LAST ( nfa)
+: HASH ( str voc - 'link) 2DROP CONTEXT CELL+ EXIT ( 1 thread)
+   1-  SWAP 1+ C@ +  7 AND  1+ CELLS CONTEXT + ;
+: NAME, ( str -)   HERE LAST !  COUNT DUP $80 OR C,
+   WIDTH C@ MIN  1 ?DO COUNT C, LOOP  C@ ( $80 OR ) C,
+   WIDTH 1+ C@ WIDTH C! ( reset width) ;
+: TOGGLE ( n)   LAST @  DUP TC@ ROT XOR  SWAP TC! ;
+: SMUDGE      $20 TOGGLE ;
+: IMMEDIATE   $40 TOGGLE ;
+: HEADER   ALIGN HERE  BL WORD  DUP CURRENT @ HASH
+   DUP @ ,  ROT SWAP !  NAME,  ALIGN ;
+
+S 70
+( Target defining words)
+: (TCREATE)   >IN @  HEADER  >IN !
+    CREATE  HERE ( cfa) FORTH ,  DOES> @  HOST , ;
+: TCREATE  TARGET DEFINITIONS (TCREATE)
+    [COMPILE] HOST DEFINITIONS ;
+
+: CODE  TCREATE  HERE 2+ ,  ASSEMBLER ;
+: uCODE ( op)   TCREATE  HERE 2+ ,  , ;
+: LABEL   HERE CONSTANT  ASSEMBLER ;
+
+
+
+
+
+
+
+B 71
+S 75
+( Forth16 kernel)  HOST DEFINITIONS HEX
+( Memory map)
+FORTH   F000 CONSTANT R0
+        E000 CONSTANT S0
+        0010 CONSTANT 'COLD
+
+( Startup code: init stacks, execute 'COLD )
+0 ORG  HOST ASSEMBLER
+    R0 T LD   R ST   S0 T LD   S ST   'COLD T LD   EXECUTE
+10 ORG   FFFF , ( xt of startup word)
+
+( e.g.,  ' MY-STARTUP-WORD 'COLD T! )
+
+
+
+
+B 76
 E 120

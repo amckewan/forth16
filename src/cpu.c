@@ -4,17 +4,6 @@
 #include <string.h>
 #include "vm.h"
 
-
-#define NEXT  W = ptr(*I++); P = ptr(*W); break; // ITC NEXT
-#define EXIT  I = ptr(*R++)
-#define push  *--S = T, T =
-#define pop   T = *S++
-#define pop2  T = S[1], S += 2
-#define pop3  T = S[2], S += 3
-#define LOGICAL ? -1 : 0
-#define LIT   (P[0] | (P[1] << 8))
-
-
 // test programs
 // #define sample hello
 #ifdef sample
@@ -30,7 +19,14 @@ int cpu_run(u16 start, u8 *vmem) {
     u16 *I = ptr(0);
     u16 *W = ptr(0);
 
-    i16 t;
+#define push    *--S = T, T =
+#define pop     T = *S++
+#define pop2    T = S[1], S += 2
+#define pop3    T = S[2], S += 3
+#define LIT     (P[0] | (P[1] << 8)) // (*(I16*)P)
+#define LOGICAL ? -1 : 0
+
+    i16 t; // temp
 
 #ifdef sample
     memcpy(vmem, sample, sizeof sample);
@@ -46,6 +42,7 @@ int cpu_run(u16 start, u8 *vmem) {
     while (1) {
         switch (*P++) {
             // 0-F runtime
+            #define NEXT  W = ptr(*I++); P = ptr(*W); break; // ITC NEXT
             case 0x00:  NEXT
             case 0x01:  push va(W + 1), NEXT // DOVAR
             case 0x02:  push  *(W + 1), NEXT // DOCON
@@ -60,6 +57,7 @@ int cpu_run(u16 start, u8 *vmem) {
             case 0x0A:  P = ptr(LIT); break; // JMP
             case 0x0B:  P = ptr(*R++); break; // RET  
             case 0x0C:  P += *(i8*)P; break; // BRANCH
+            case 0x0D:  W = ptr(T), pop, P = ptr(*W); break; // EXECUTE
 
             // 10-17 load T from register or immediate
             case 0x10:  T = LIT, P+=2; break;
@@ -133,10 +131,31 @@ int cpu_run(u16 start, u8 *vmem) {
             case 0x57:  T = *S++ ^ T; break; // XOR
             case 0x58:  T = *S++ << T; break; // LSHIFT
             case 0x59:  T = ((u16)*S++) >> T; break; // RSHIFT
-            case 0x5A:  T = ~T; break; // INVERT 
-            case 0x5B:  T = -T; break; // NEGATE 
+            case 0x5A:  T = *S++ >> T; break; // ARSHIFT
+            case 0x5B:  T = ~T; break; // INVERT 
+            case 0x5C:  T = -T; break; // NEGATE 
 
+// CODE @          
+// CODE !          *(u16 *)(m + T) = *S; pop2; break;
+// CODE +!         *(u16 *)(m + T) += *S; pop2; break;
+// CODE COUNT  *--S = T + 1;
+// CODE C@     T = m[T]; break;
+// CODE C!     m[T] = *S; pop2; break;
 
+// CODE 2@     *--S = AT(T + u16); T = AT(T); break;
+// CODE 2!     AT(T) = *S++; AT(T + u16) = *S++; pop; break;
+
+            // 60-6F memory
+            case 0x60:  T = *(u16*)ptr(T); break; // @
+            case 0x61:  *(u16*)ptr(T) = *S, pop2; break; // !
+            case 0x62:  *(u16*)ptr(T) += *S, pop2; break; // +!
+            case 0x63:  T = vmem[T]; break; // C@
+            case 0x64:  vmem[T] = T, pop2; break; // C!
+            case 0x65:  vmem[T] += T, pop2; break; // C+!
+            case 0x66:  *--S = *(u16*)ptr(T+2),
+                           T = *(u16*)ptr(T);   break; // 2@
+            case 0x67:  *(u16*)ptr(T)   = *S++,
+                        *(u16*)ptr(T+2) = *S++, pop; break; // 2!
 
 
             case 0xA0: { // M*/ ( d1 n1 n2 -- d2)
